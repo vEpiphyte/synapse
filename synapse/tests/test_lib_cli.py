@@ -107,10 +107,26 @@ class CliTest(SynTest):
         self.skipIfOldPython()
         import unittest.mock as mock
 
-        @mock.patch('synapse.lib.cli.get_input', return_value='quit')
+        cmdg = CmdGenerator(['help', 'quit'])
+
+        @mock.patch('synapse.lib.cli.get_input', cmdg)
         def _innertest(testcase, *args, **kwargs):
             with s_cli.Cli(None) as cli:
                 cli.runCmdLoop()
                 testcase.eq(cli.isfini, True)
 
-        _innertest()
+        _innertest(self)
+
+    def test_cli_cmd_loop_eof(self):
+        self.skipIfOldPython()
+        import unittest.mock as mock
+
+        cmdg = CmdGenerator(['help'], on_end=EOFError)
+
+        @mock.patch('synapse.lib.cli.get_input', cmdg)
+        def _innertest(testcase, *args, **kwargs):
+            with s_cli.Cli(None) as cli:
+                cli.runCmdLoop()
+                testcase.eq(cli.isfini, True)
+
+        _innertest(self)
