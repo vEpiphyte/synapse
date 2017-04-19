@@ -154,3 +154,39 @@ def getIngestCore(path, core=None):
         gest.ingest(core)
 
     return core
+
+
+class CmdGenerator(object):
+    '''
+    Generates a callable object which can be used with unittest.mock.patch in
+    order to do CLI driven testing. 
+    '''
+    def __init__(self, cmds, on_end='quit'):
+        '''
+        ctor
+        
+        :param cmds: Iterable of commands. 
+        :param on_end: Either a string or a exception class that is returned or raised when all the provided commands have been exhausted.
+        '''
+        self.cmds = []
+        self.cur_command = 0
+        self.end_action = on_end
+        for cmd in cmds:
+            self.cmds.append(cmd)
+        self.total_commands = len(self.cmds)
+
+    def __call__(self, *args, **kwargs):
+        try:
+            ret = self.cmds[self.cur_command]
+            self.cur_command = self.cur_command + 1
+            return ret
+        except IndexError:
+            ret = self.on_end()
+            return ret
+
+    def on_end(self):
+        if isinstance(self.end_action, str):
+            return self.end_action
+        if callable(self.end_action) and issubclass(self.end_action, BaseException):
+            raise self.end_action('No further actions')
+        raise Exception('Unhandled end action')
