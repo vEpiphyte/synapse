@@ -1,6 +1,8 @@
 import re
 import json
+import math
 import base64
+import struct
 import logging
 import collections
 
@@ -768,6 +770,82 @@ class PropValuType(DataType):
         retv = '='.join([prop, nrepr])
         return retv, subs
 
+class FloatType(DataType):
+    N = 64
+    MINSIZE = - (2 ** (N - 1))
+    NEGZERO = -0.0
+
+    def __init__(self, tlib, name, **info):
+        DataType.__init__(self, tlib, name, **info)
+
+        self.fmt = info.get('fmt', '%f')
+        self.minval = info.get('min',None)
+        self.maxval = info.get('max',None)
+
+        self.ismin = info.get('ismin',False)
+        self.ismax = info.get('ismax',False)
+
+        # cache the min or max function to avoid cond logic
+        # during norm() for perf
+        self.minmax = None
+
+        if self.ismin:
+            self.minmax = min
+
+        elif self.ismax:
+            self.minmax = max
+
+    def norm(self, valu, oldval=None):
+        if isinstance(valu, str):
+            try:
+                valu = float(valu)
+            except ValueError as e:
+                self._raiseBadValu(valu)
+
+        if isinstance(valu, int):
+            valu = float(valu)
+
+        if not isinstance(valu, float):
+            self._raiseBadValu(valu, mesg='Unknown valu type.')
+        if math.isnan(valu):
+            self._raiseBadValu(valu, mesg='Cannot store NaN')
+        if math.isinf(valu):
+            self._raiseBadValu(valu, mesg='Cannot store inf')
+
+        # Pack the float into a orderable format
+        valu = self.packFloat(valu)
+
+        if oldval != None and self.minmax:
+            valu = self.minmax(valu,oldval)
+
+        if self.minval != None and valu < self.minval:
+            self._raiseBadValu(valu, minval=self.minval)
+
+        if self.maxval != None and valu > self.maxval:
+            self._raiseBadValu(valu, maxval=self.maxval)
+
+        return valu,{}
+
+    @classmethod
+    def packFloat(cls, valu):
+        # Special handling to avoid negative zero, which otherwise
+        # packs to self.MINSIZE and unpacks to regular 0.0
+        if valu == cls.NEGZERO:
+            valu = 0.0
+        ret = struct.unpack('<q', struct.pack('<d', valu))[0]
+        if valu < 0:
+            ret = cls.MINSIZE - ret
+        return ret
+
+    @classmethod
+    def unpackFloat(cls, valu):
+        if valu < 0:
+            valu = cls.MINSIZE - valu
+        ret = struct.unpack('<d', struct.pack('<q', valu))[0]
+        return ret
+
+    def repr(self, valu):
+        return self.fmt % self.unpackFloat(valu)
 
 class TypeLib:
     '''
@@ -789,6 +867,7 @@ class TypeLib:
         self.addType('int', ctor='synapse.lib.types.IntType', doc='The base integer type')
         self.addType('bool', ctor='synapse.lib.types.BoolType', doc='A boolean type')
         self.addType('json', ctor='synapse.lib.types.JsonType', doc='A json type (stored as str)')
+        self.addType('float', ctor='synapse.lib.types.FloatType', doc='The base float type.')
 
         self.addType('guid', ctor='synapse.lib.types.GuidType', doc='A Globally Unique Identifier type')
         self.addType('sepr', ctor='synapse.lib.types.SeprType',

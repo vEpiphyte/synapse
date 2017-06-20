@@ -380,7 +380,7 @@ def debase64(b):
     return base64.b64decode(b.encode('utf8'))
 
 def canstor(s):
-    return type(s) in (int, str)
+    return type(s) in (int, str, float)
 
 def makedirs(path, mode=0o777):
     os.makedirs(path, mode=mode, exist_ok=True)

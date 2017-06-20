@@ -1,5 +1,7 @@
 # -*- coding: UTF-8 -*-
 import base64
+import random
+import string
 
 import synapse.cores.common as s_cores_common
 
@@ -239,11 +241,100 @@ class DataTypesTest(SynTest):
     def test_type_comp(self):
         tlib = s_types.TypeLib()
         tlib.addType('foo:bar', subof='comp', fields='hehe=inet:fqdn,haha=inet:ipv4')
+        valu,subs = tlib.getTypeNorm('foo:bar', ('WOOT.COM',0x01020304) )
+        self.eq( valu, '47e2e1c0f894266153f836a75440f803' )
+        self.eq( subs.get('hehe'), 'woot.com' )
+        self.eq( subs.get('haha'), 0x01020304 )
 
-        valu, subs = tlib.getTypeNorm('foo:bar', ('WOOT.COM', 0x01020304))
-        self.eq(valu, '47e2e1c0f894266153f836a75440f803')
-        self.eq(subs.get('hehe'), 'woot.com')
-        self.eq(subs.get('haha'), 0x01020304)
+    def test_datatype_float_ordering(self):
+        # Generate random floating point values in ranges from 1 to 20 decimal points in length
+        n = 200
+        m = 20
+        # n = 40
+        # m = 8
+        vals = [0.0, -0.0]
+        for _ in range(n):
+            num_digits = random.randint(1, m+1)
+            decimal_point = random.randint(1, num_digits)
+            a = [random.choice(['-', ''])]
+            for _ in range(decimal_point):
+                a.append(random.choice(string.digits))
+            a.append('.')
+            for _ in range(num_digits-decimal_point):
+                a.append(random.choice(string.digits))
+            s = ''.join(a)
+            f = float(s)
+            vals.append(f)
+        vals.sort()
+        d = {}
+        for f in vals:
+            d[f] = s_types.FloatType.packFloat(f)
+        l2 = list(vals)
+        # Resort by packed float value
+        l2.sort(key=lambda x: d.get(x))
+        self.eq(vals, l2)
+
+    def test_datatype_float_basic(self):
+        tlib = s_types.TypeLib()
+        # Zero is zero is zero.
+        self.eq(tlib.getTypeNorm('float', 0)[0], 0)
+        self.eq(tlib.getTypeNorm('float', 0.0)[0], 0)
+        self.eq(tlib.getTypeNorm('float', -0.0)[0], 0)
+        # Test a few cases
+        self.eq(tlib.getTypeNorm('float', -1.1)[0], -4607632778762754458)
+        self.eq(tlib.getTypeNorm('float', -1)[0], -4607182418800017408)
+        self.eq(tlib.getTypeNorm('float', -0.9)[0], -4606281698874543309)
+        self.eq(tlib.getTypeNorm('float', 1)[0], 4607182418800017408)
+        self.eq(tlib.getTypeNorm('float', 1.0)[0], 4607182418800017408)
+        self.eq(tlib.getTypeNorm('float', 1.1)[0], 4607632778762754458)
+        self.eq(tlib.getTypeNorm('float', 12.345)[0], 4623139235229744497)
+        # Form strings
+        self.eq(tlib.getTypeNorm('float', '-9e-1')[0], -4606281698874543309)
+        self.eq(tlib.getTypeNorm('float', '1.0')[0], 4607182418800017408)
+        self.eq(tlib.getTypeNorm('float', '1.2345E1')[0], 4623139235229744497)
+        # Bad vals
+        self.raises(BadTypeValu, tlib.getTypeNorm, 'float', 'rutabega')
+        self.raises(BadTypeValu, tlib.getTypeNorm, 'float', {})
+        self.raises(BadTypeValu, tlib.getTypeNorm, 'float', [])
+        self.raises(BadTypeValu, tlib.getTypeNorm, 'float', ())
+        self.raises(BadTypeValu, tlib.getTypeNorm, 'float', b'\x00')
+        # Ensure specific float vals which don't represent real numbers are normed.
+        for val in ['inf', 'infinity', 'nan']:
+            self.raises(BadTypeValu, tlib.getTypeNorm, 'float', val)
+        # Ensure we can unpack data back out into human readable values
+        self.eq(s_types.FloatType.unpackFloat(0), 0.0)
+        self.eq(s_types.FloatType.unpackFloat(-4607182418800017408), -1)
+        self.eq(s_types.FloatType.unpackFloat(4607182418800017408), 1)
+        self.eq(s_types.FloatType.unpackFloat(4623139235229744497), 12.345)
+        # And we have a working default repr for rendering values
+        # The %f defaults to 6 padding places
+        self.eq(tlib.getTypeRepr('float', tlib.getTypeNorm('float', '-9e-1')[0]), '-0.900000')
+        self.eq(tlib.getTypeRepr('float', tlib.getTypeNorm('float', -0.9)[0]), '-0.900000')
+        self.eq(tlib.getTypeRepr('float', tlib.getTypeNorm('float', 0)[0]), '0.000000')
+        self.eq(tlib.getTypeRepr('float', tlib.getTypeNorm('float', 12.345)[0]), '12.345000')
+        # This shows rounding during repr but we also get valid unpacking behavior
+        v = -234234.1234198
+        packed_v = tlib.getTypeNorm('float', v)[0]
+        self.eq(tlib.getTypeRepr('float', packed_v), '-234234.123420')
+        self.eq(s_types.FloatType.unpackFloat(valu=packed_v), v)
+        # We can customize the repr for a more robust repr
+        tlib.addType('woot:repr', subof='float', fmt='%.7f')
+        woot_packed_v = tlib.getTypeNorm('woot:repr', v)[0]
+        self.eq(tlib.getTypeRepr('woot:repr', woot_packed_v), str(v))
+
+    def test_datatype_float_minmax(self):
+        tlib = s_types.TypeLib()
+        oldval_40 = s_types.FloatType.packFloat(40)
+        oldval_20 = s_types.FloatType.packFloat(20)
+
+        tlib.addType('woot:min', subof='float', ismin=1)
+        tlib.addType('woot:max', subof='float', ismax=1)
+
+        self.eq( tlib.getTypeNorm('woot:min', 20, oldval=oldval_40)[0], oldval_20 )
+        self.eq( tlib.getTypeNorm('woot:min', 40, oldval=oldval_20)[0], oldval_20 )
+
+        self.eq( tlib.getTypeNorm('woot:max', 20, oldval=oldval_40)[0], oldval_40 )
+        self.eq( tlib.getTypeNorm('woot:max', 40, oldval=oldval_20)[0], oldval_40 )
 
     def test_datatype_int_minmax(self):
         tlib = s_types.TypeLib()
