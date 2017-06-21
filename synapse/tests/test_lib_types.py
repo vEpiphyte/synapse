@@ -248,7 +248,7 @@ class DataTypesTest(SynTest):
 
     def test_datatype_float_ordering(self):
         # Generate random floating point values in ranges from 1 to 20 decimal points in length
-        n = 200
+        n = 1000
         m = 20
         # n = 40
         # m = 8
