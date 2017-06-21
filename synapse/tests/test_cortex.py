@@ -176,6 +176,7 @@ class CortexBaseTest(SynTest):
         self.runblob(core)
         # runstore should be run last as it may do destructive actions to data in the Cortex.
         self.runstore(core)
+        self.runfloatrange(core)
 
     def rundsets(self, core):
         tufo = core.formTufoByProp('intform', 1)
@@ -553,6 +554,39 @@ class CortexBaseTest(SynTest):
             self.eq(core.getSizeBy('ge', 'rg', -1, limit=3), 3)
         self.eq(core.getSizeBy('ge', 'rg', 30), 2)
         self.eq(core.getSizeBy('ge', 'rg', s_cores_lmdb.MAX_INT_VAL), 1)
+
+    def runfloatrange(self, core):
+        core.addTufoForm('test:float',ptype='float')
+
+        neg9999 = s_types.FloatType.packFloat(-9999.999)
+        zero = 0
+        neg11 = s_types.FloatType.packFloat(-1.1)
+        pos11 = s_types.FloatType.packFloat(-1.1)
+        pos9999 = s_types.FloatType.packFloat(9999.999)
+
+        node = core.formTufoByProp('test:float', -9999.999)
+        node = core.formTufoByProp('test:float', 0)
+        node = core.formTufoByProp('test:float', -1.1)
+        node = core.formTufoByProp('test:float', 1.1)
+        node = core.formTufoByProp('test:float', 9999.999)
+
+        self.eq(core.getSizeBy('range', 'test:float', (neg9999, zero)), 2)
+        rows = core.getRowsBy('range', 'test:float', (neg9999, zero))
+        self.eq(len(rows), 2)
+
+        # self.assertEqual( core.getSizeBy('range','rg',(0,20)), 1 )
+        # self.assertEqual( core.getRowsBy('range','rg',(0,20))[0][2], 10 )
+
+        # range is inclusive of `min`, exclusive of `max`
+        # self.assertEqual( core.getSizeBy('range','rg',(9,11)), 1 )
+        # self.assertEqual( core.getSizeBy('range','rg',(10,12)), 1 )
+        # self.assertEqual( core.getSizeBy('range','rg',(8,10)), 0 )
+        #
+        # self.assertEqual( core.getSizeBy('ge','rg',20), 1 )
+        # self.assertEqual( core.getRowsBy('ge','rg',20)[0][2], 30)
+        #
+        # self.assertEqual( core.getSizeBy('le','rg',20), 1 )
+        # self.assertEqual( core.getRowsBy('le','rg',20)[0][2], 10 )
 
     def runjson(self, core):
 
