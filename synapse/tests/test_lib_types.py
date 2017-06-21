@@ -273,6 +273,9 @@ class DataTypesTest(SynTest):
         # Resort by packed float value
         l2.sort(key=lambda x: d.get(x))
         self.eq(vals, l2)
+        # ensure converting everything back works too!
+        for k, v in d.items():
+            self.eq(k, s_types.FloatType.unpackFloat(v))
 
     def test_datatype_float_basic(self):
         tlib = s_types.TypeLib()
