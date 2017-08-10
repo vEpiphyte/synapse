@@ -90,12 +90,28 @@ class RamStorage(s_cores_storage.Storage):
         return ret
 
     def sizeByGe(self, prop, valu, limit=None):
+        if limit:
+            ret = 0
+            for r in tuple(self.rowsbyprop.get(prop, ())):
+                if isinstance(r[2], int) and r[2] >= valu:
+                    ret += 1
+                if ret == limit:
+                    return ret
+            return ret
         return sum(1 for r in self.rowsbyprop.get(prop, ()) if isinstance(r[2], int) and r[2] >= valu)
 
     def rowsByGe(self, prop, valu, limit=None):
         return [r for r in self.rowsbyprop.get(prop, ()) if isinstance(r[2], int) and r[2] >= valu][:limit]
 
     def sizeByLe(self, prop, valu, limit=None):
+        if limit:
+            ret = 0
+            for r in tuple(self.rowsbyprop.get(prop, ())):
+                if isinstance(r[2], int) and r[2] <= valu:
+                    ret += 1
+                    if ret == limit:
+                        return ret
+            return ret
         return sum(1 for r in self.rowsbyprop.get(prop, ()) if isinstance(r[2], int) and r[2] <= valu)
 
     def rowsByLe(self, prop, valu, limit=None):

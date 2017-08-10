@@ -555,9 +555,12 @@ class CortexBaseTest(SynTest):
         self.eq(core.getSizeBy('range', 'rg', (-1, 2)), 3)
         self.eq(core.getSizeBy('lt', 'rg', 0), 3)
         self.eq(core.getSizeBy('le', 'rg', 0), 4)
-        # This is broken for RAM and SQLite
-        if 0:
+        # This is broken for SQLite / PSQL
+        if core.getStoreType() in ('ram', 'lmdb'):
             self.eq(core.getSizeBy('ge', 'rg', -1, limit=3), 3)
+            self.eq(core.getSizeBy('ge', 'rg', -1, limit=100), 6)
+            self.eq(core.getSizeBy('le', 'rg', 0, limit=2), 2)
+            self.eq(core.getSizeBy('le', 'rg', 0, limit=100), 4)
         self.eq(core.getSizeBy('ge', 'rg', 30), 2)
         self.eq(core.getSizeBy('ge', 'rg', s_cores_lmdb.MAX_INT_VAL), 1)
         self.eq(core.getSizeBy('gt', 'rg', 0), 4)
