@@ -72,7 +72,9 @@ class Storage(s_config.Config):
         self.initRowsBy('range', self.rowsByRange)
 
         self.initSizeBy('ge', self.sizeByGe)
+        self.initSizeBy('gt', self.sizeByGt)
         self.initSizeBy('le', self.sizeByLe)
+        self.initSizeBy('lt', self.sizeByLt)
         self.initSizeBy('range', self.sizeByRange)
 
         self.initJoinsBy('ge', self._joinsByGe)
@@ -1157,6 +1159,12 @@ class Storage(s_config.Config):
 
     def rowsByGt(self, prop, valu, limit=None):
         return self.rowsByGe(prop, valu + 1, limit=limit)
+
+    def sizeByGt(self, prop, valu, limit=None):
+        return self.sizeByGe(prop, valu + 1, limit=limit)
+
+    def sizeByLt(self, prop, valu, limit=None):
+        return self.sizeByLe(prop, valu - 1, limit=limit)
 
     def _joinsByLt(self, prop, valu, limit=None):
         return self._joinsByLe(prop, valu - 1, limit=limit)
