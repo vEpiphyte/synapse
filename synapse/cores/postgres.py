@@ -57,12 +57,12 @@ class PsqlStorage(s_cores_sqlite.SqliteStorage):
     _t_getsize_by_prop_str_wmax = 'SELECT COUNT(*) FROM {{TABLE}} WHERE prop={{PROP}} AND MD5(strval)=MD5({{VALU}}) AND tstamp<{{MAXTIME}} LIMIT {{LIMIT}}'
     _t_getsize_by_prop_str_wminmax = 'SELECT COUNT(*) FROM {{TABLE}} WHERE prop={{PROP}} AND MD5(strval)=MD5({{VALU}}) AND tstamp>={{MINTIME}} AND tstamp<{{MAXTIME}} LIMIT {{LIMIT}}'
 
-    _t_getsize_by_range = 'SELECT COUNT(*) AS count FROM( SELECT 1 FROM {{TABLE}} WHERE prop={{PROP}} and intval >= ' \
-                          '{{MINVALU}} AND intval < {{MAXVALU}} LIMIT {{LIMIT}} ) AS count_table'
-    _t_getsize_by_le = 'SELECT COUNT(*) AS count FROM ( SELECT 1 FROM {{TABLE}} WHERE prop={{PROP}} and intval <= {{VALU}} ' \
-                       'LIMIT {{LIMIT}} ) AS count_table'
-    _t_getsize_by_ge = 'SELECT COUNT(*) AS count FROM  ( SELECT 1 FROM {{TABLE}} WHERE prop={{PROP}} and intval >= {{VALU}} ' \
-                       'LIMIT {{LIMIT}} ) AS count_table'
+    _t_getsize_by_range_lmt = 'SELECT COUNT(*) AS count FROM( SELECT 1 FROM {{TABLE}} WHERE prop={{PROP}} and ' \
+                              'intval >= {{MINVALU}} AND intval < {{MAXVALU}} LIMIT {{LIMIT}} ) AS count_table'
+    _t_getsize_by_le_lmt = 'SELECT COUNT(*) AS count FROM ( SELECT 1 FROM {{TABLE}} WHERE prop={{PROP}} and ' \
+                           'intval <= {{VALU}} LIMIT {{LIMIT}} ) AS count_table'
+    _t_getsize_by_ge_lmt = 'SELECT COUNT(*) AS count FROM  ( SELECT 1 FROM {{TABLE}} WHERE prop={{PROP}} and ' \
+                           'intval >= {{VALU}} LIMIT {{LIMIT}} ) AS count_table'
 
     _t_delrows_by_prop_str = 'DELETE FROM {{TABLE}} WHERE prop={{PROP}} AND MD5(strval)=MD5({{VALU}})'
     _t_delrows_by_prop_str_wmin = 'DELETE FROM {{TABLE}} WHERE prop={{PROP}} AND MD5(strval)=MD5({{VALU}}) AND tstamp>={{MINTIME}}'

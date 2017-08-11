@@ -185,12 +185,16 @@ class SqliteStorage(s_cores_storage.Storage):
     _t_getsize_by_prop_int_wminmax = 'SELECT COUNT(*) FROM {{TABLE}} WHERE prop={{PROP}} AND intval={{VALU}} AND tstamp>={{MINTIME}} AND tstamp<{{MAXTIME}} LIMIT {{LIMIT}}'
     _t_getsize_by_prop_str_wminmax = 'SELECT COUNT(*) FROM {{TABLE}} WHERE prop={{PROP}} AND strval={{VALU}} AND tstamp>={{MINTIME}} AND tstamp<{{MAXTIME}} LIMIT {{LIMIT}}'
     ################################################################################
-    _t_getsize_by_range = 'SELECT COUNT(*) FROM ( SELECT 1 FROM {{TABLE}} WHERE prop={{PROP}} and intval >= ' \
-                          '{{MINVALU}} AND intval < {{MAXVALU}} LIMIT {{LIMIT}} )'
-    _t_getsize_by_le = 'SELECT COUNT(*) FROM ( SELECT 1 FROM {{TABLE}} WHERE prop={{PROP}} and intval <= {{VALU}} ' \
-                       'LIMIT {{LIMIT}} )'
-    _t_getsize_by_ge = 'SELECT COUNT(*) FROM  ( SELECT 1 FROM {{TABLE}} WHERE prop={{PROP}} and intval >= {{VALU}} ' \
-                       'LIMIT {{LIMIT}} )'
+    _t_getsize_by_range = 'SELECT COUNT(*) FROM {{TABLE}} WHERE prop={{PROP}} and intval >= {{MINVALU}} AND ' \
+                          'intval < {{MAXVALU}} '
+    _t_getsize_by_le = 'SELECT COUNT(*) FROM {{TABLE}} WHERE prop={{PROP}} and intval <= {{VALU}}'
+    _t_getsize_by_ge = 'SELECT COUNT(*) FROM {{TABLE}} WHERE prop={{PROP}} and intval >= {{VALU}}'
+    _t_getsize_by_range_lmt = 'SELECT COUNT(*) FROM ( SELECT 1 FROM {{TABLE}} WHERE prop={{PROP}} and ' \
+                                'intval >= {{MINVALU}} AND intval < {{MAXVALU}} LIMIT {{LIMIT}} )'
+    _t_getsize_by_le_lmt = 'SELECT COUNT(*) FROM ( SELECT 1 FROM {{TABLE}} WHERE prop={{PROP}} and ' \
+                             'intval <= {{VALU}} LIMIT {{LIMIT}} )'
+    _t_getsize_by_ge_lmt = 'SELECT COUNT(*) FROM  ( SELECT 1 FROM {{TABLE}} WHERE prop={{PROP}} and ' \
+                             'intval >= {{VALU}} LIMIT {{LIMIT}} )'
 
     _t_delrows_by_iden = 'DELETE FROM {{TABLE}} WHERE iden={{IDEN}}'
     _t_delrows_by_iden_prop = 'DELETE FROM {{TABLE}} WHERE iden={{IDEN}} AND prop={{PROP}}'
@@ -303,20 +307,34 @@ class SqliteStorage(s_cores_storage.Storage):
         return self._foldTypeCols(rows)
 
     def sizeByRange(self, prop, valu, limit=None):
-        limit = self._getDbLimit(limit)
-        q = self._q_getsize_by_range
         minvalu, maxvalu = valu[0], valu[1]
+        limit = self._getDbLimit(limit)
+
+        if limit is None or limit < 1:
+            q = self._q_getsize_by_range
+            return self.select(q, prop=prop, minvalu=minvalu, maxvalu=maxvalu)[0][0]
+
+        q = self._q_getsize_by_range_lmt
         return self.select(q, prop=prop, minvalu=minvalu, maxvalu=maxvalu, limit=limit)[0][0]
 
     def sizeByGe(self, prop, valu, limit=None):
         limit = self._getDbLimit(limit)
-        q = self._q_getsize_by_ge
+
+        if limit is None or limit < 1:
+            q = self._q_getsize_by_ge
+            return self.select(q, prop=prop, valu=valu)[0][0]
+
+        q = self._q_getsize_by_ge_lmt
         return self.select(q, prop=prop, valu=valu, limit=limit)[0][0]
 
     def sizeByLe(self, prop, valu, limit=None):
         limit = self._getDbLimit(limit)
-        q = self._q_getsize_by_le
-        args = [prop, valu, limit]
+
+        if limit is None or limit < 1:
+            q = self._q_getsize_by_le
+            return self.select(q, prop=prop, valu=valu)[0][0]
+
+        q = self._q_getsize_by_le_lmt
         return self.select(q, prop=prop, valu=valu, limit=limit)[0][0]
 
     def _initDbConn(self):
@@ -533,6 +551,9 @@ class SqliteStorage(s_cores_storage.Storage):
         self._q_getsize_by_ge = self._prepQuery(self._t_getsize_by_ge)
         self._q_getsize_by_le = self._prepQuery(self._t_getsize_by_le)
         self._q_getsize_by_range = self._prepQuery(self._t_getsize_by_range)
+        self._q_getsize_by_ge_lmt = self._prepQuery(self._t_getsize_by_ge_lmt)
+        self._q_getsize_by_le_lmt = self._prepQuery(self._t_getsize_by_le_lmt)
+        self._q_getsize_by_range_lmt = self._prepQuery(self._t_getsize_by_range_lmt)
 
         self._q_delrows_by_iden = self._prepQuery(self._t_delrows_by_iden)
         self._q_delrows_by_iden_prop = self._prepQuery(self._t_delrows_by_iden_prop)
