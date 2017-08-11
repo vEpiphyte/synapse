@@ -185,10 +185,12 @@ class SqliteStorage(s_cores_storage.Storage):
     _t_getsize_by_prop_int_wminmax = 'SELECT COUNT(*) FROM {{TABLE}} WHERE prop={{PROP}} AND intval={{VALU}} AND tstamp>={{MINTIME}} AND tstamp<{{MAXTIME}} LIMIT {{LIMIT}}'
     _t_getsize_by_prop_str_wminmax = 'SELECT COUNT(*) FROM {{TABLE}} WHERE prop={{PROP}} AND strval={{VALU}} AND tstamp>={{MINTIME}} AND tstamp<{{MAXTIME}} LIMIT {{LIMIT}}'
     ################################################################################
-
-    _t_getsize_by_range = 'SELECT COUNT(*) FROM {{TABLE}} WHERE prop={{PROP}} and intval >= {{MINVALU}} AND intval < {{MAXVALU}} LIMIT {{LIMIT}}'
-    _t_getsize_by_le = 'SELECT COUNT(*) FROM {{TABLE}} WHERE prop={{PROP}} and intval <= {{VALU}} LIMIT {{LIMIT}}'
-    _t_getsize_by_ge = 'SELECT COUNT(*) FROM {{TABLE}} WHERE prop={{PROP}} and intval >= {{VALU}} LIMIT {{LIMIT}}'
+    _t_getsize_by_range = 'SELECT COUNT(*) FROM ( SELECT 1 FROM {{TABLE}} WHERE prop={{PROP}} and intval >= ' \
+                          '{{MINVALU}} AND intval < {{MAXVALU}} LIMIT {{LIMIT}} )'
+    _t_getsize_by_le = 'SELECT COUNT(*) FROM ( SELECT 1 FROM {{TABLE}} WHERE prop={{PROP}} and intval <= {{VALU}} ' \
+                       'LIMIT {{LIMIT}} )'
+    _t_getsize_by_ge = 'SELECT COUNT(*) FROM  ( SELECT 1 FROM {{TABLE}} WHERE prop={{PROP}} and intval >= {{VALU}} ' \
+                       'LIMIT {{LIMIT}} )'
 
     _t_delrows_by_iden = 'DELETE FROM {{TABLE}} WHERE iden={{IDEN}}'
     _t_delrows_by_iden_prop = 'DELETE FROM {{TABLE}} WHERE iden={{IDEN}} AND prop={{PROP}}'
