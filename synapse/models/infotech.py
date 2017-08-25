@@ -1,7 +1,82 @@
 from synapse.eventbus import on
-from synapse.lib.module import CoreModule, modelrev
+
+import synapse.common as s_common
+
+from synapse.lib.module import CoreModule
 
 class ItMod(CoreModule):
+
+    def initCoreModule(self):
+        # ctors for
+        self.core.addSeedCtor('it:sec:filehit:yara', self.seedFileHitGen(ruleform='it:sec:rule:yara'))
+        self.core.addSeedCtor('it:sec:filehit:snort', self.seedFileHitGen(ruleform='it:sec:rule:snort'))
+
+    def seedFileHitGen(self, ruleform):
+        '''
+        Seed constructor for building it:sec:filehit nodes from the
+        intersection of file:bytes and it:sec:rule:* nodes.
+
+        Args:
+            ruleform:
+
+        Returns:
+
+        '''
+
+        def seedFileHit(prop, valu, **props):
+            valu, subs = self.core.getPropNorm(prop, valu)
+
+            tufo = self.core.getTufoByProp(prop, valu)
+            if tufo is not None:
+                return tufo
+
+            sig = subs.get('sig')
+
+            rtufo = self.core.getTufoByProp(ruleform, sig)
+            if not rtufo:
+                raise s_common.BadTypeValu(mesg='Sig value is not the correct type.',
+                                           type=ruleform, valu=sig)
+
+            with self.core.getCoreXact() as xact:
+
+                props.update(subs)
+
+                tick = s_common.now()
+                iden = s_common.guid()
+
+                fulls, toadd = self.core._normTufoProps(prop, subs, isadd=True)
+                self.core._addDefProps(prop, fulls)
+
+                fulls[prop] = valu
+                fulls['tufo:form'] = prop
+
+                self.core.formed[prop] += 1
+
+                self.core.fire('node:form', form=prop, valu=valu, props=fulls)
+
+                rows = [(iden, p, v, tick) for (p, v) in fulls.items()]
+
+                self.core.addRows(rows)
+
+                tufo = (iden, fulls)
+
+                if self.core.caching:
+                    # avoid .new in cache
+                    cachefo = (iden, dict(fulls))
+                    for p, v in fulls.items():
+                        self.core._bumpTufoCache(cachefo, p, None, v)
+
+                # fire notification events
+                xact.fire('node:add', form=prop, valu=valu, node=tufo)
+                xact.spliced('node:add', form=prop, valu=valu, props=props)
+
+                if self.core.autoadd:
+                    self.core._runAutoAdd(toadd)
+
+                tufo[1]['.new'] = True
+                return tufo
+
+        return seedFileHit
 
     @staticmethod
     def getBaseModels():
@@ -32,6 +107,20 @@ class ItMod(CoreModule):
                 ('it:dev:regval', {'subof': 'comp', 'fields': 'key=it:dev:regkey',
                                    'optfields': 'str=it:dev:str,int=it:dev:int,bytes=file:bytes',
                                    'doc': 'A windows registry key/val pair'}),
+                ('it:av:sig',
+                 {'subof': 'sepr', 'sep': '/', 'fields': 'org,ou:alias|sig,str:lwr', 'doc': 'An antivirus signature'}),
+                ('it:av:filehit',
+                 {'subof': 'sepr', 'sep': '/', 'fields': 'file,file:bytes|sig,it:av:sig', 'doc': 'An antivirus hit'}),
+
+                ('it:sec:rule', {'subof': 'guid',
+                                 'doc': 'A guid for storing the rule text of an arbitrary signature type.'}),
+                ('it:sec:filehit', {'subof': 'comp', 'fields': 'file,file:bytes|sig,it:sec:rule',
+                                    'doc': 'The interesection of a file and a arbitrary rule text.'}),
+
+                ('it:sec:rule:snort:reference', {'subof': 'str',
+                                                 'doc': 'Semicolon delimited list of Snort references',
+                                                 'regex': r'^([\d\w]+,.*);'}),
+
             ),
 
             'forms': (
@@ -252,6 +341,59 @@ class ItMod(CoreModule):
                     ('proc', {'ptype': 'it:exec:proc'}),
                     ('time', {'ptype': 'time'}),
                 )),
+
+                ('it:sec:rule:yara',
+                 {'ptype': 'it:sec:rule', 'doc': 'YARA rule.'},
+                 [
+                    ('text', {'ptype': 'str', 'doc': 'The text of a YARA rule', 'ro': 1, 'req': 1}),
+                    ('rev', {'ptype': 'int', 'doc': 'Rule revision', 'defval': -1}),
+                    ('name', {'ptype': 'str', 'doc': 'Rule name'},)
+                 ]
+                 ),
+
+                ('it:sec:filehit:yara',
+                 {'ptype': 'it:sec:filehit', 'doc': 'YARA rule hit'},
+                 [
+                     ('file', {'ptype': 'file:bytes', 'ro': 1}),
+                     # XXX There is no strict checking of the ptype ACTUALLY being a :rule:yara
+                     # XXX This is an attempt to show specific forms made from generic types
+                     # XXX To avoid form explosion for all the different rule types we could ever
+                     # XXX Want to model in the futrue.
+                     ('sig', {'ptype': 'it:sec:rule', 'ro': 1}),
+                 ]
+                 ),
+
+                ('it:sec:rule:snort',
+                 {'ptype': 'it:sec:rule', 'doc': 'Snort rule.'},
+                 [
+                     ('text', {'ptype': 'str', 'doc': 'The text of a Snort rule', 'ro': 1, 'req': 1}),
+                     # Metadata from
+                     # http://manual-snort-org.s3-website-us-east-1.amazonaws.com/node31.html#SECTION00441000000000000000
+                     ('rev', {'ptype': 'int', 'doc': 'Rule revision', 'defval': -1}),
+                     ('msg', {'ptype': 'str', 'doc': 'Snort msg'},),
+                     ('sid', {'ptype': 'int', 'doc': 'Snort Rule ID'}, ),
+                     ('gid', {'ptype': 'int', 'doc': 'Snort Generator ID'},),
+
+                     ('reference', {'ptype': 'it:sec:rule:snort:reference',
+                                    'doc': 'Semicolon delimited list of Snort references',
+                                    },),
+                     ('classtype', {'ptype': 'str', 'doc': 'Snort classtype'},),
+                     ('priority', {'ptype': 'int', 'doc': 'Snort Rule priority'},),
+                 ]
+                 ),
+
+                ('it:sec:filehit:snort',
+                 {'ptype': 'it:sec:filehit', 'doc': 'Snort rule hit'},
+                 [
+                     ('file', {'ptype': 'file:bytes', 'ro': 1}),
+                     # XXX There is no strict checking of the ptype ACTUALLY being a :rule:snort
+                     # XXX This is an attempt to show specific forms made from generic types
+                     # XXX To avoid form explosion for all the different rule types we could ever
+                     # XXX Want to model in the futrue.
+                     ('sig', {'ptype': 'it:sec:rule', 'ro': 1}),
+                 ]
+                 ),
+
             ),
 
         }

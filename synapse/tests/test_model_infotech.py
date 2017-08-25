@@ -106,6 +106,8 @@ class InfoTechTest(SynTest):
 
     def test_model_infotech_itdev(self):
 
+        # This tests not only the snort form but also the seed ctor as well
+
         with s_cortex.openurl('ram:///') as core:
             core.setConfOpt('enforce', 1)
 
@@ -245,3 +247,146 @@ class InfoTechTest(SynTest):
             self.eq(node[1].get('it:exec:reg:get:host'), host)
             self.eq(node[1].get('it:exec:reg:get:proc'), proc)
             self.eq(node[1].get('it:exec:reg:get:time'), tick)
+
+    def test_model_infotech_yara(self):
+        with s_cortex.openurl('ram:///') as core:
+            core.setConfOpt('enforce', 1)
+
+            t0 = core.formTufoByProp('it:sec:rule:yara', '*',
+                                     text='Some rule goes here.',
+                                     name='FindPennywise',
+                                     rev=0)
+
+            self.nn(t0)
+            self.eq(t0[1].get('it:sec:rule:yara:text'), 'Some rule goes here.')
+            self.eq(t0[1].get('it:sec:rule:yara:name'), 'FindPennywise')
+            self.eq(t0[1].get('it:sec:rule:yara:rev'), 0)
+
+            t1 = core.formTufoByProp('it:sec:rule:yara', '*',
+                                     text='Some rule goes here.')
+            self.nn(t1)
+            self.ne(t0[0], t1[0])
+            self.notin('it:sec:rule:yara:name', t1[1])
+            self.eq(t1[1].get('it:sec:rule:yara:rev'), -1)
+
+            fileguid = guid()
+            fnode = core.formTufoByProp('file:bytes', fileguid)
+            self.nn(fnode)
+
+            h0 = core.formTufoByProp('it:sec:filehit:yara', [fileguid,
+                                                             t0[1].get('it:sec:rule:yara')]
+                                     )
+            self.nn(h0)
+            self.eq(h0[1].get('it:sec:filehit:yara:sig'), t0[1].get('it:sec:rule:yara'))
+            self.eq(h0[1].get('it:sec:filehit:yara:file'), fileguid)
+            self.true(h0[1].get('.new'))
+
+            h0_g = core.formTufoByProp('it:sec:filehit:yara', [fileguid,
+                                                              t0[1].get('it:sec:rule:yara')])
+            self.eq(h0[0], h0_g[0])
+            self.false(h0_g[1].get('.new'))
+
+            # We can pivot from a rule to a filehit
+            nodes = core.eval('guid({}) pivot(it:sec:filehit:yara:sig)'.format(t0[0]))
+            self.eq(len(nodes), 1)
+            node = nodes[0]
+            self.eq(h0[0], node[0])
+
+            # We can pivot from a filehit to a file
+            nodes = core.eval('guid({}) pivot(:file, file:bytes)'.format(h0[0]))
+            self.eq(len(nodes), 1)
+            node = nodes[0]
+            self.eq(fnode[0], node[0])
+
+            # Ensure we cannot form a it:sec:filehit:yara from a snort rule
+            # b/c of the ctor's
+            self.raises(BadTypeValu,
+                        core.formTufoByProp,
+                        'it:sec:filehit:yara',
+                        [fileguid, s0[1].get('it:sec:rule:snort')]
+                        )
+
+            # Ensure we form file bytes nodes if someone hands us a file:bytes guid
+            iden = guid()
+            hf0 = core.formTufoByProp('it:sec:filehit:yara', [iden,
+                                                             t0[1].get('it:sec:rule:yara')]
+                                     )
+            self.nn(hf0)
+            self.eq(hf0[1].get('it:sec:filehit:yara:sig'), t0[1].get('it:sec:rule:yara'))
+            self.eq(hf0[1].get('it:sec:filehit:yara:file'), iden)
+
+            # Ensure cache behavior of the seed ctor is covered by tests
+            core.setConfOpt('caching', 1)
+            iden2 = guid()
+            hf1 = core.formTufoByProp('it:sec:filehit:yara', [iden2,
+                                                             t0[1].get('it:sec:rule:yara')]
+                                     )
+            self.nn(hf1)
+            self.eq(hf1[1].get('it:sec:filehit:yara:sig'), t0[1].get('it:sec:rule:yara'))
+            self.eq(hf1[1].get('it:sec:filehit:yara:file'), iden2)
+
+    def test_model_infotech_snort(self):
+        with s_cortex.openurl('ram:///') as core:
+            core.setConfOpt('enforce', 1)
+
+            s0 = core.formTufoByProp('it:sec:rule:snort', '*',
+                                     text='Some rule goes here.',
+                                     sid=1000001,
+                                     rev=0,
+                                     msg='I am a message!',
+                                     gid=0xdeadb33f,
+                                     reference='bugtraq,1387;',
+                                     classtype='unknown',
+                                     priority=1)
+
+            self.nn(s0)
+            self.eq(s0[1].get('it:sec:rule:snort:text'), 'Some rule goes here.')
+            self.eq(s0[1].get('it:sec:rule:snort:sid'), 1000001)
+            self.eq(s0[1].get('it:sec:rule:snort:rev'), 0)
+            self.eq(s0[1].get('it:sec:rule:snort:msg'), 'I am a message!')
+            self.eq(s0[1].get('it:sec:rule:snort:reference'), 'bugtraq,1387;')
+            self.eq(s0[1].get('it:sec:rule:snort:classtype'), 'unknown')
+            self.eq(s0[1].get('it:sec:rule:snort:priority'), 1)
+
+            # Good reference valus
+            valu, subs = core.getPropNorm('it:sec:rule:snort:reference', 'arachnids,IDS287; bugtraq,1387;')
+            self.nn(valu)
+            self.eq(len(subs), 0)
+            valu, subs = core.getPropNorm('it:sec:rule:snort:reference', 'arachnids,IDS287; bugtraq,1387; cve,CAN-2000-1574;')
+            self.nn(valu)
+            self.eq(len(subs), 0)
+            ref = 'url,manual-snort-org.s3-website-us-east-1.amazonaws.com/node31.html#SECTION00442000000000000000;'
+            valu, subs = core.getPropNorm('it:sec:rule:snort:reference', ref)
+            self.nn(valu)
+            self.eq(len(subs), 0)
+            valu, subs = core.getPropNorm('it:sec:rule:snort:reference', 'arachnids,IDS287; bugtraq,1387; cve,CAN-2000-1574;')
+            self.nn(valu)
+            self.eq(len(subs), 0)
+
+            # Bad  reference valus
+            self.raises(BadTypeValu, core.getPropNorm, 'it:sec:rule:snort:reference', 'lol')
+            self.raises(BadTypeValu, core.getPropNorm, 'it:sec:rule:snort:reference', ' bugtraq,1387; ')
+            self.raises(BadTypeValu, core.getPropNorm, 'it:sec:rule:snort:reference',
+                        'i am a string, but not delimted until now;')
+
+            # Defval
+
+            s1 = core.formTufoByProp('it:sec:rule:snort', '*',
+                                     text='Some other rule goes here.',
+                                     )
+
+            self.nn(s1)
+            self.eq(s1[1].get('it:sec:rule:snort:text'), 'Some other rule goes here.')
+            self.eq(s1[1].get('it:sec:rule:snort:rev'), -1)
+
+            fileguid = guid()
+            fnode = core.formTufoByProp('file:bytes', fileguid)
+            self.nn(fnode)
+
+            h0 = core.formTufoByProp('it:sec:filehit:snort', [fileguid,
+                                                              s0[1].get('it:sec:rule:snort')]
+                                     )
+            self.nn(h0)
+            self.eq(h0[1].get('it:sec:filehit:snort:sig'), s0[1].get('it:sec:rule:snort'))
+            self.eq(h0[1].get('it:sec:filehit:snort:file'), fileguid)
+            self.true(h0[1].get('.new'))
