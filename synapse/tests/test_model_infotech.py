@@ -298,6 +298,10 @@ class InfoTechTest(SynTest):
             node = nodes[0]
             self.eq(fnode[0], node[0])
 
+            s0 = core.formTufoByProp('it:sec:rule:snort', '*',
+                                     text='Some rule goes here.',
+                                     )
+
             # Ensure we cannot form a it:sec:filehit:yara from a snort rule
             # b/c of the ctor's
             self.raises(BadTypeValu,
