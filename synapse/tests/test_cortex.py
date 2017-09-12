@@ -168,6 +168,53 @@ class CortexBaseTest(SynTest):
         self.rundarks(core)
         self.runblob(core)
         self.runstore(core)
+        self.runmalformedrows(core)
+
+    def runmalformedrows(self, core):
+        # This is a malformed node which has props which, when updated by
+        # the row level APIs, produced different results by storage type.
+        core.setConfOpt('enforce', 1)
+        tick = s_common.now()
+        iden = s_common.guid()
+        rows = (
+            (iden, 'tufo:form', 'inet:dns:a', tick),
+            (iden, 'inet:dns:a', 'woot.com/1.2.3.4', tick),
+            (iden, 'inet:dns:a:fqdn', 'woot.com', tick),
+            (iden, 'inet:dns:a:ipv4', 0x01020304, tick),
+            (iden, 'inet:dns:a:seen:min', '2017-08-23 10:06:27', tick),
+            (iden, 'inet:dns:a:seen:max', '2018-08-23 10:06:27', tick),
+        )
+        core.addRows(rows)
+
+        node = core.getTufoByIden(iden)
+        self.nn(node)
+
+        mint = node[1].get('inet:dns:a:seen:min')
+        maxt = node[1].get('inet:dns:a:seen:max')
+        self.isinstance(mint, str)
+        self.isinstance(maxt, str)
+
+        form, pprop = s_tufo.ndef(node)
+        props = {}
+
+        if mint:
+            mint, _ = core.getPropNorm('inet:dns:a:seen:min', mint)
+            props['inet:dns:a:seen:min'] = mint
+
+        if maxt:
+            maxt, _ = core.getPropNorm('inet:dns:a:seen:max', maxt)
+            props['inet:dns:a:seen:max'] = maxt
+
+        self.eq(len(props), 2)
+
+        if props:
+            for prop, valu in props.items():
+                core.setRowsByIdProp(node[0], prop, valu)
+
+        node = core.getTufoByIden(iden)
+
+        self.isinstance(node[1].get('inet:dns:a:seen:min'), int)
+        self.isinstance(node[1].get('inet:dns:a:seen:max'), int)
 
     def rundsets(self, core):
         tufo = core.formTufoByProp('lol:zonk', 1)
