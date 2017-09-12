@@ -90,9 +90,6 @@ class ItMod(CoreModule):
                 ('it:sec:cve', {'subof': 'str:lwr', 'regex': '(?i)^CVE-[0-9]{4}-[0-9]{4,}$',
                                 'doc': 'A CVE entry from Mitre'}),
 
-                ('it:av:sig', {'subof': 'sepr', 'sep': '/',
-                               'fields': 'org,ou:alias|sig,str:lwr', 'doc': 'An antivirus signature'}),
-                ('it:av:filehit', {'subof': 'sepr', 'sep': '/', 'fields': 'file,file:bytes|sig,it:av:sig', 'doc': 'An antivirus hit'}),
 
                 ('it:dev:str', {'subof': 'str', 'doc': 'A developer selected string'}),
                 ('it:dev:int', {'subof': 'int', 'doc': 'A developer selected int constant'}),
