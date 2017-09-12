@@ -556,7 +556,7 @@ class CortexBaseTest(SynTest):
         self.eq(core.getSizeBy('ge', 'rg', s_cores_lmdb.MAX_INT_VAL), 1)
 
     def runfloatrange(self, core):
-        core.addTufoForm('test:float',ptype='float')
+        core.addTufoForm('test:float', ptype='float')
 
         neg9999 = s_types.FloatType.packFloat(-9999.999)
         zero = 0

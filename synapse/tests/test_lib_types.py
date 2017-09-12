@@ -241,10 +241,10 @@ class DataTypesTest(SynTest):
     def test_type_comp(self):
         tlib = s_types.TypeLib()
         tlib.addType('foo:bar', subof='comp', fields='hehe=inet:fqdn,haha=inet:ipv4')
-        valu,subs = tlib.getTypeNorm('foo:bar', ('WOOT.COM',0x01020304) )
-        self.eq( valu, '47e2e1c0f894266153f836a75440f803' )
-        self.eq( subs.get('hehe'), 'woot.com' )
-        self.eq( subs.get('haha'), 0x01020304 )
+        valu, subs = tlib.getTypeNorm('foo:bar', ('WOOT.COM', 0x01020304))
+        self.eq(valu, '47e2e1c0f894266153f836a75440f803')
+        self.eq(subs.get('hehe'), 'woot.com')
+        self.eq(subs.get('haha'), 0x01020304)
 
     def test_datatype_float_ordering(self):
         # Generate random floating point values in ranges from 1 to 20 decimal points in length
@@ -254,13 +254,13 @@ class DataTypesTest(SynTest):
         # m = 8
         vals = [0.0, -0.0]
         for _ in range(n):
-            num_digits = random.randint(1, m+1)
+            num_digits = random.randint(1, m + 1)
             decimal_point = random.randint(1, num_digits)
             a = [random.choice(['-', ''])]
             for _ in range(decimal_point):
                 a.append(random.choice(string.digits))
             a.append('.')
-            for _ in range(num_digits-decimal_point):
+            for _ in range(num_digits - decimal_point):
                 a.append(random.choice(string.digits))
             s = ''.join(a)
             f = float(s)
@@ -333,11 +333,11 @@ class DataTypesTest(SynTest):
         tlib.addType('woot:min', subof='float', ismin=1)
         tlib.addType('woot:max', subof='float', ismax=1)
 
-        self.eq( tlib.getTypeNorm('woot:min', 20, oldval=oldval_40)[0], oldval_20 )
-        self.eq( tlib.getTypeNorm('woot:min', 40, oldval=oldval_20)[0], oldval_20 )
+        self.eq(tlib.getTypeNorm('woot:min', 20, oldval=oldval_40)[0], oldval_20)
+        self.eq(tlib.getTypeNorm('woot:min', 40, oldval=oldval_20)[0], oldval_20)
 
-        self.eq( tlib.getTypeNorm('woot:max', 20, oldval=oldval_40)[0], oldval_40 )
-        self.eq( tlib.getTypeNorm('woot:max', 40, oldval=oldval_20)[0], oldval_40 )
+        self.eq(tlib.getTypeNorm('woot:max', 20, oldval=oldval_40)[0], oldval_40)
+        self.eq(tlib.getTypeNorm('woot:max', 40, oldval=oldval_20)[0], oldval_40)
 
     def test_datatype_int_minmax(self):
         tlib = s_types.TypeLib()

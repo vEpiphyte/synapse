@@ -779,11 +779,11 @@ class FloatType(DataType):
         DataType.__init__(self, tlib, name, **info)
 
         self.fmt = info.get('fmt', '%f')
-        self.minval = info.get('min',None)
-        self.maxval = info.get('max',None)
+        self.minval = info.get('min', None)
+        self.maxval = info.get('max', None)
 
-        self.ismin = info.get('ismin',False)
-        self.ismax = info.get('ismax',False)
+        self.ismin = info.get('ismin', False)
+        self.ismax = info.get('ismax', False)
 
         # cache the min or max function to avoid cond logic
         # during norm() for perf
@@ -815,16 +815,16 @@ class FloatType(DataType):
         # Pack the float into a orderable format
         valu = self.packFloat(valu)
 
-        if oldval != None and self.minmax:
-            valu = self.minmax(valu,oldval)
+        if oldval is not None and self.minmax:
+            valu = self.minmax(valu, oldval)
 
-        if self.minval != None and valu < self.minval:
+        if self.minval is not None and valu < self.minval:
             self._raiseBadValu(valu, minval=self.minval)
 
-        if self.maxval != None and valu > self.maxval:
+        if self.maxval is not None and valu > self.maxval:
             self._raiseBadValu(valu, maxval=self.maxval)
 
-        return valu,{}
+        return valu, {}
 
     @classmethod
     def packFloat(cls, valu):
