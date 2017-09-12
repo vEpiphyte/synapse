@@ -254,8 +254,8 @@ class SqliteStorage(s_cores_storage.Storage):
     _t_deljoin_by_prop_str_wminmax = 'DELETE FROM {{TABLE}} WHERE iden IN (SELECT iden FROM {{TABLE}} WHERE prop={{PROP}} AND strval={{VALU}} AND tstamp>={{MINTIME}} AND tstamp<{{MAXTIME}})'
 
     ################################################################################
-    _t_uprows_by_iden_prop_str = 'UPDATE {{TABLE}} SET strval={{VALU}} WHERE iden={{IDEN}} and prop={{PROP}}'
-    _t_uprows_by_iden_prop_int = 'UPDATE {{TABLE}} SET intval={{VALU}} WHERE iden={{IDEN}} and prop={{PROP}}'
+    _t_uprows_by_iden_prop_str = 'UPDATE {{TABLE}} SET strval={{VALU}}, intval=NULL WHERE iden={{IDEN}} and prop={{PROP}}'
+    _t_uprows_by_iden_prop_int = 'UPDATE {{TABLE}} SET intval={{VALU}}, strval=NULL WHERE iden={{IDEN}} and prop={{PROP}}'
 
     def _initDbInfo(self):
         name = self._link[1].get('path')[1:]
