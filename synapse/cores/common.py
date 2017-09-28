@@ -8,7 +8,6 @@ import synapse.common as s_common
 import synapse.dyndeps as s_dyndeps
 import synapse.reactor as s_reactor
 import synapse.telepath as s_telepath
-import synapse.datamodel as s_datamodel
 
 import synapse.cores.storage as s_storage
 
