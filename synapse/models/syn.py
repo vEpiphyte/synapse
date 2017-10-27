@@ -197,3 +197,10 @@ class SynMod(CoreModule):
                     i = i + len(chunk)
                     logger.debug('Loading {:,d} [{}%] rows into transaction'.format(i, int((i / tot) * 100)))
         logger.debug('Finished adding node:created rows to the Cortex')
+
+    # XXX Change this date based on when things are being mainlined
+    @modelrev('syn', 201710270736)
+    def _revModl201710270736(self):
+        with self.core.getCoreXact():
+            logger.debug('Renaming tufo:form to node:form')
+            self.core.store.updateProperty('tufo:form', 'node:form')

@@ -172,3 +172,48 @@ class SynModelTest(SynTest):
                 rows = core.getRowsByIdProp(iden, 'node:created')
                 _, _, valu, stamp = rows[0]
                 self.gt(stamp, valu)  # node:created row's stamp will be higher than its valu
+
+    # XXX Change this date based on when things are being mainlined
+    def test_model_syn_201710270736(self):
+        data = {}
+        iden0, iden1 = guid(), guid()
+        tick = now()
+
+        rows = [
+            (iden0, 'inet:ipv4:type', '??', tick),
+            (iden0, 'inet:ipv4', 16909060, tick),
+            (iden0, 'tufo:form', 'inet:ipv4', tick),
+            (iden0, 'inet:ipv4:cc', '??', tick),
+            (iden0, 'inet:ipv4:asn', -1, tick),
+            (iden0, 'node:created', tick, tick),
+
+            (iden1, 'file:bytes', 'd41d8cd98f00b204e9800998ecf8427e', tick),
+            (iden1, 'file:bytes:mime', '??', tick),
+            (iden1, 'file:bytes:md5', 'd41d8cd98f00b204e9800998ecf8427e', tick),
+            (iden1, 'tufo:form', 'file:bytes', tick),
+            (iden1, 'node:created', tick, tick),
+        ]
+
+        with s_cortex.openstore('ram:///') as stor:
+            # force model migration callbacks
+            stor.setModlVers('syn', 0)
+
+            def addrows(mesg):
+                stor.addRows(rows)
+                data['added'] = True
+
+            # XXX Change this date based on when things are being mainlined
+            stor.on('modl:vers:rev', addrows, name='syn', vers=201710270736)
+
+            with s_cortex.fromstore(stor) as core:
+                self.true(data.get('added'))
+
+                # 1 file:bytes, 1 inet:ipv4, 1 syn:core
+                nodes = core.eval('node:form')
+                self.ge(len(nodes), 3)
+                self.len(0, core.eval('tufo:form'))
+                self.len(0, core.getRowsByProp('tufo:form'))
+
+                for node in nodes:
+                    self.isin('node:form', node[1])
+                    self.notin('tufo:form', node[1])
