@@ -260,7 +260,7 @@ class Cortex(EventBus, DataModel, Runtime, s_ingest.IngestApi):
         norm, subs = self.getPropNorm(form, valu)
 
         node[1][form] = norm
-        node[1]['tufo:form'] = form
+        node[1]['node:form'] = form
         node[1]['node:created'] = s_common.now()
 
         self.runt_props[(form, None)].append(node)
@@ -1891,7 +1891,7 @@ class Cortex(EventBus, DataModel, Runtime, s_ingest.IngestApi):
         '''
         iden = reqiden(tufo)
 
-        form = tufo[1].get('tufo:form')
+        form = tufo[1].get('node:form')
         valu = tufo[1].get(form)
 
         tag, subs = self.getTypeNorm('syn:tag', tag)
@@ -1969,7 +1969,7 @@ class Cortex(EventBus, DataModel, Runtime, s_ingest.IngestApi):
         if not subprops:
             return tufo
 
-        form = tufo[1].get('tufo:form')
+        form = tufo[1].get('node:form')
         valu = tufo[1].get(form)
 
         with self.getCoreXact() as xact:
@@ -2428,7 +2428,7 @@ class Cortex(EventBus, DataModel, Runtime, s_ingest.IngestApi):
             self._addDefProps(prop, fulls)
 
             fulls[prop] = valu
-            fulls['tufo:form'] = prop
+            fulls['node:form'] = prop
             fulls['node:created'] = s_common.now()
 
             # Examine the fulls dictionary and identify any props which are
@@ -2494,7 +2494,7 @@ class Cortex(EventBus, DataModel, Runtime, s_ingest.IngestApi):
         '''
         splitp = form + ':'
         for name in list(fulls.keys()):
-            if name in ('tufo:form', 'node:created', 'node:loc'):
+            if name in ('node:form', 'node:created', 'node:loc'):
                 continue
             if not self.isSetPropOk(name, isadd):
                 prop = name.split(splitp)[1]
@@ -2513,7 +2513,7 @@ class Cortex(EventBus, DataModel, Runtime, s_ingest.IngestApi):
             list: List of tuples (prop,valu,**props) for consumption by formTufoByProp.
         '''
         ret = []
-        skips = ('tufo:form', 'node:created', 'node:loc')
+        skips = ('node:form', 'node:created', 'node:loc')
         valu = fulls.get(form)
         for fprop, fvalu in fulls.items():
             if fprop in skips:
@@ -2547,7 +2547,7 @@ class Cortex(EventBus, DataModel, Runtime, s_ingest.IngestApi):
             core.delTufo(foob)
 
         '''
-        form = tufo[1].get('tufo:form')
+        form = tufo[1].get('node:form')
         valu = tufo[1].get(form)
 
         # fire notification events
@@ -2949,7 +2949,7 @@ class Cortex(EventBus, DataModel, Runtime, s_ingest.IngestApi):
         '''
         reqiden(tufo)
         # add tufo form prefix to props
-        form = tufo[1].get('tufo:form')
+        form = tufo[1].get('node:form')
         fulls = self._normTufoProps(form, props, tufo=tufo)
         if not fulls:
             return tufo
@@ -3009,7 +3009,7 @@ class Cortex(EventBus, DataModel, Runtime, s_ingest.IngestApi):
             tufo = core.incTufoProp(tufo,prop)
 
         '''
-        form = tufo[1].get('tufo:form')
+        form = tufo[1].get('node:form')
         prop = form + ':' + prop
 
         if not self.isSetPropOk(prop):
@@ -3022,7 +3022,7 @@ class Cortex(EventBus, DataModel, Runtime, s_ingest.IngestApi):
         # to allow storage layer optimization
         iden = tufo[0]
 
-        form = tufo[1].get('tufo:form')
+        form = tufo[1].get('node:form')
         valu = tufo[1].get(form)
 
         with self.inclock:
