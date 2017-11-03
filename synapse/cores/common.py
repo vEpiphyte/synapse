@@ -2472,19 +2472,20 @@ class Cortex(EventBus, DataModel, Runtime, s_ingest.IngestApi):
             return
 
         props = self.getFormReqs(form)
+        props = set(props)
+
+        # Add in universal props which are required
+        props = props.union(self.unipropsreq)
+
         # Return fast for perf
         if not props:
             return
-
-        props = set(props)
 
         # Special case for handling syn:prop:glob=1 on will not have a ptype
         # despite the model requiring a ptype to be present.
         if fulls.get('syn:prop:glob') and 'syn:prop:ptype' in props:
             props.remove('syn:prop:ptype')
 
-        # Add in universal props
-        props = props.union(self.uniprops)
         # Compute any missing props
         missing = props - set(fulls)
         if missing:
@@ -2930,7 +2931,11 @@ class Cortex(EventBus, DataModel, Runtime, s_ingest.IngestApi):
 
             valu = props.get(name)
 
-            prop = form + ':' + name
+            if name in self.uniprops:
+                prop = name
+
+            else:
+                prop = form + ':' + name
 
             oldv = None
             if tufo is not None:
@@ -2938,7 +2943,7 @@ class Cortex(EventBus, DataModel, Runtime, s_ingest.IngestApi):
 
             valu, subs = self.getPropNorm(prop, valu, oldval=oldv)
             if tufo is not None:
-                if tufo[1].get(prop) == valu:
+                if oldv == valu:
                     props.pop(name, None)
                     continue
                 _isadd = not bool(oldv)
