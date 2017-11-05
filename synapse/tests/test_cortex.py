@@ -2929,6 +2929,11 @@ class CortexTest(SynTest):
             self.len(1, nodes)
             self.eq(nodes[0][0], node[0])
 
+            # XXX This should really be part of a storm refs() test
+            nodes = core.eval('syn:core=self refs() -syn:core')
+            self.len(1, nodes)
+            self.eq(nodes[0][0], node[0])
+
             # Lift nodes by node:created text timestamp
             nodes = core.eval('node:created>={}'.format(rvalu))
             self.ge(len(nodes), 3)

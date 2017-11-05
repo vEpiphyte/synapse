@@ -142,6 +142,7 @@ class DataModel(s_types.TypeLib):
                             ro=1,
                             req=1,
                             universal=1,
+                            # refable=1,  # Do we want node:created to be refable?
                             )
         if 'node:ndef' not in uniprops:
             self.addPropDef('node:ndef',
@@ -149,7 +150,9 @@ class DataModel(s_types.TypeLib):
                             doc='The unique guid representing the combination of the node form and primary property.',
                             ro=1,
                             req=1,
-                            universal=1)
+                            universal=1,
+                            refable=1,
+                            )
 
     def getModelDict(self):
         '''

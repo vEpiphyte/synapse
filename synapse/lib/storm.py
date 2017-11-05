@@ -1149,6 +1149,13 @@ class Runtime(Configable):
         # Build a set of pv props so we can lift by form on 'in'
         pvprops = [prop for prop, pnfo in core.getPropsByType('propvalu')]
 
+        # Build a set of pivotable universal props which can be ref() against.
+        uniprops = [prop for prop in core.getUniversalProps() if core.getPropInfo(prop, 'refable')]
+        pivotuprops = collections.defaultdict(list)
+        for uprop in uniprops:
+            for prop, info in core.getPropsByType(core.getPropInfo(uprop, 'ptype')):
+                pivotuprops[uprop].append(prop)
+
         done = set()
         if not args or 'in' in args:
 
@@ -1198,6 +1205,27 @@ class Runtime(Configable):
 
                     if limt.dec(len(news)):
                         break
+
+                for uprop, props in pivotuprops.items():
+                    uvalu = node[1].get(uprop)
+
+                    for prop in props:
+
+                        pkey = (prop, uvalu)
+                        if pkey in done:
+                            continue
+
+                        done.add(pkey)
+
+                        if uvalu is None:
+                            continue
+
+                        news = core.getTufosByProp(prop, valu=uvalu, limit=limt.get())
+
+                        [query.add(n) for n in news]
+
+                        if limt.dec(len(news)):
+                            break
 
         if not args or 'out' in args:
 
