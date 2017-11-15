@@ -1,14 +1,44 @@
 import logging
+import threading
+import collections
+
 import msgpack
 import msgpack.fallback as m_fallback
 
+# import synapse.glob as s_glob
+
 logger = logging.getLogger(__name__)
 
-# Single Packer object which is reused for performance
-pakr = msgpack.Packer(use_bin_type=True, encoding='utf8')
-if isinstance(pakr, m_fallback.Packer):  # pragma: no cover
+# A private packer object which is tested for class type & warnings
+_pakr = msgpack.Packer(use_bin_type=True, encoding='utf8')
+if isinstance(_pakr, m_fallback.Packer):  # pragma: no cover
     logger.warning('msgpack is using the pure python fallback implementation. This will impact performance negatively.')
-    pakr = None
+
+pdict = collections.defaultdict(msgpack.Packer, use_bin_type=True, encoding='utf8')
+
+def cullPackers():
+    '''
+    Cull packer objects so dead threads no longer have a packer object
+    which is occupying memory.
+    '''
+    pthreads = list(pdict.keys())
+    current_threads = {thr.ident for thr in threading.enumerate()}
+    for thread in pthreads:
+        if thread not in current_threads:
+            pdict.pop(thread)
+
+# Pulling in s_glob throws an import loop becuase its pulled into s_common :(
+# s_glob.sched.loop(60, cullPackers)
+
+def getPakr():
+    '''
+    Get the Packer for the current thread.
+
+    Returns:
+        msgpack.Packer: A thread-local packer object.
+    '''
+    iden = threading.get_ident()
+    return pdict[iden]
 
 def en(item):
     '''
@@ -20,8 +50,7 @@ def en(item):
     Returns:
         bytes: The serialized bytes
     '''
-    if pakr is None:  # pragma: no cover
-        return msgpack.packb(item, use_bin_type=True, encoding='utf8')
+    pakr = getPakr()
     try:
         return pakr.pack(item)
     except Exception as e:
