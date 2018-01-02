@@ -202,6 +202,8 @@ class Nyx(object):
         self.request_defaults = {}
         self.api_args = []
         self.api_kwargs = {}
+        self.argcache = s_cache.Cache(maxtime=60, onmiss=self._onArgMiss)
+        self.args_skip_encoding = set()
         self.gest = None
         self.gest_name = None
         self.gest_open = None
@@ -234,13 +236,33 @@ class Nyx(object):
         self.url_vars.update(self._raw_config.get('vars', {}))
         self.request_defaults = self._raw_config.get('http', {})
         self._parseGestConfig(self._raw_config.get('ingest'))
-        self.api_args.extend(self._raw_config.get('api_args', []))
+        for argfo in self._raw_config.get('api_args'):
+            if isinstance(argfo, str):
+                self.api_args.extend(argfo)
+                continue
+            # Assume a tufo and unpack it
+            argn, argfo = argfo
+
+            # we may have an API
+            defval = argfo.get('defval')
+            if defval:
+                self.api_kwargs[argn] = defval
+
+            # allow u
+            skip_encoding = argfo.get('skip_encoding')
+            if skip_encoding:
+                self.args_skip_encoding.add(argn)
+
+            # Stamp argn into the api_args if it is not there and is not
+            # in api_kwargs
+            if argn not in self.api_args and argn not in self.api_kwargs:
+                self.api_args.append(argn)
+
         for key in self.reserved_api_args:
             if key in self.api_args:
                 raise s_common.BadConfValu(name=key,
                                            valu=None,
                                            mesg='Reserved api_arg used.')
-        self.api_kwargs.update(self._raw_config.get('api_optargs', {}))
 
         # Set effective url
         self.effective_url = self.url_template.format(**self.url_vars)
@@ -257,6 +279,12 @@ class Nyx(object):
             raise s_common.NoSuchName(name='name', mesg='API Ingest definition is missing its name.')
         if not self.gest_open:
             raise s_common.NoSuchName(name='open', mesg='Ingest definition is missing a open directive.')
+
+    def _onArgMiss(self, key):
+        argn, argv = key
+        if argn in self.args_skip_encoding:
+            return argv
+        return urllib.parse.quote_plus(argv)
 
     def buildHttpRequest(self,
                          api_args=None):  # type: (dict) -> t_http.HttpRequest
@@ -287,9 +315,9 @@ class Nyx(object):
             if argv is s_common.novalu:
                 logger.error('Missing argument: %s', argn)
                 raise s_common.NoSuchName(name=argn, mesg='Missing an expected argument')
-            t_args[argn] = urllib.parse.quote_plus(str(argv))
+            t_args[argn] = self.argcache.get((argn, str(argv)))
         for argn, defval in self.api_kwargs.items():
-            t_args[argn] = urllib.parse.quote_plus(str(api_args.get(argn, defval)))
+            t_args[argn] = self.argcache.get((argn, str(api_args.get(argn, defval))))
         url = self.effective_url.format(**t_args)
         req = t_http.HTTPRequest(url, body=body, **self.request_defaults)
         return req

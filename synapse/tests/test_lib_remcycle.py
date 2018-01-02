@@ -73,6 +73,32 @@ class StandaloneTestServer(s_eventbus.EventBus):
         self.wapp.addApiPath('/v1/bytes', self.nommer.noms)
         self.running = True
 
+def get_syn_get_config():
+    gconfig = {
+        'apis': [
+            [
+                'get',
+                {
+                    'doc': 'Simple GET request without url encoding',
+                    'url': '{{url}}',
+                    'http': {
+                        'validate_cert': False
+                    },
+                    'api_args': [
+                        [
+                            "url",
+                            {
+                                "skip_encoding": True
+                            }
+                        ],
+                    ],
+                }
+            ]
+        ],
+        'doc': 'Simple Remcycle helper APIs',
+        'namespace': 'synapse',
+    }
+    return gconfig
 
 def get_vertex_global_config():
     gconfig = {
@@ -278,8 +304,15 @@ class NyxTest(SynTest):
 
             "doc": "api example",
 
-            "api_args": ["someplace"],
-            "api_optargs": {"domore": 0}
+            "api_args": [
+                "someplace",
+                [
+                    "domore",
+                    {
+                        "defval": 0
+                    }
+                ]
+            ],
         }
         self.post_config = {
             "url": "http://vertex.link/api/v4/geoloc/{{someplace}}/postendpoint",
