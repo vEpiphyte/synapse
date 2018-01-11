@@ -14,6 +14,13 @@ import synapse.lib.atomfile as s_atomfile
 log = logging.getLogger(__name__)
 
 magic_v1 = unhex(b'265343eb3092ce626cdb731ef68bde83')
+magic_v2 = unhex(b'c2af5c5f28e38384295f2fc2af203a29')
+
+current_magic = magic_v2
+
+old_magic = (
+    magic_v1,
+)
 
 FLAG_USED = 0x01
 
@@ -37,7 +44,7 @@ def packHeapHead(size, flags=FLAG_USED):
     Returns:
         bytes: The bytes header object.
     '''
-    return struct.pack(headfmt, magic_v1, size, flags)
+    return struct.pack(headfmt, current_magic, size, flags)
 
 def unpackHeapHead(byts):
     '''
@@ -111,9 +118,9 @@ class Heap(s_eventbus.EventBus):
 
         # Validate the header of the file
         _magic, _size, _flags = unpackHeapHead(self.readoff(0, headsize))
-        if _magic != magic_v1:
+        if _magic != current_magic:
             raise s_common.BadHeapFile(mesg='Bad magic value present in heapfile header',
-                                       evalu=magic_v1, magic=_magic)
+                                       evalu=current_magic, magic=_magic)
         if _size != 32:
             raise s_common.BadHeapFile(mesg='Unexpected size found for first heapfile header',
                                        evalu=headsize + 32, size=_size)
@@ -287,12 +294,18 @@ class Heap(s_eventbus.EventBus):
                 self.atom.resize(heapsize)
                 self.fire('heap:resize', size=heapsize)
 
+            # Calculate the return value - this is the value that bytes
+            # will be written too. It has enough room for a header to be
+            # written underneath of it.
             dataoff = self.used + headsize
 
-            self.used += fullsize
-
-            self._writeoff(32, s_common.to_bytes(self.used, 8))
+            # Record the heap header for the current allocation
             self._writeoff(self.used, packHeapHead(size))
+
+            # Update our used value and then write that new used value
+            # to the heapfile
+            self.used += fullsize
+            self._writeoff(32, s_common.to_bytes(self.used, 8))
 
         return dataoff
 

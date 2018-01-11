@@ -135,7 +135,6 @@ class HeapTest(SynTest):
             self.eq(rand, byts)
 
     def test_heap_allocation_death(self):
-        self.skipTest('Known bad behavior')
         fd = tempfile.TemporaryFile()
 
         with s_heap.Heap(fd) as heap:
