@@ -18,13 +18,13 @@ magic_v2 = unhex(b'c2af5c5f28e38384295f2fc2af203a29')
 
 current_magic = magic_v2
 
-old_magic = (
+known_magic = (
     magic_v1,
 )
 
 FLAG_USED = 0x01
 
-headfmt = '<16sQQ'
+headfmt = '<16sQQQ'
 headsize = struct.calcsize(headfmt)
 
 # heap blob format
@@ -33,7 +33,7 @@ headsize = struct.calcsize(headfmt)
 
 defpage = 0x100000
 
-def packHeapHead(size, flags=FLAG_USED):
+def packHeapHead(reqsize, allocsize, flags=FLAG_USED):
     '''
     Generate a heap header bytestring from a given size and flags.
 
@@ -44,7 +44,7 @@ def packHeapHead(size, flags=FLAG_USED):
     Returns:
         bytes: The bytes header object.
     '''
-    return struct.pack(headfmt, current_magic, size, flags)
+    return struct.pack(headfmt, current_magic, reqsize, allocsize, flags)
 
 def unpackHeapHead(byts):
     '''
@@ -54,10 +54,10 @@ def unpackHeapHead(byts):
         byts (bytes): Bytes to unpack.
 
     Returns:
-        (bytes, int, int): A tuple containing the magic value, size and flags.
+        (bytes, int, int, int): A tuple containing the magic value, size and flags.
     '''
-    magic, size, flags = struct.unpack(headfmt, byts)
-    return magic, size, flags
+    magic, reqsize, allocsize, flags = struct.unpack(headfmt, byts)
+    return magic, reqsize, allocsize, flags
 
 class Heap(s_eventbus.EventBus):
     '''
@@ -99,7 +99,7 @@ class Heap(s_eventbus.EventBus):
             # first record in the heap.
             size = 32 # a few qword slots for expansion
             used = headsize + size
-            heaphead = packHeapHead(size) + s_common.to_bytes(used, 8)
+            heaphead = packHeapHead(size, size) + s_common.to_bytes(used, 8)
 
             # Fill up the remainder of the current pagesize with null bytes
             rem = len(heaphead) % self.pagesize
@@ -117,13 +117,13 @@ class Heap(s_eventbus.EventBus):
             self.atom = s_atomfile.getAtomFile(fd)
 
         # Validate the header of the file
-        _magic, _size, _flags = unpackHeapHead(self.readoff(0, headsize))
+        _magic, _reqsize, _allocsize, _flags = unpackHeapHead(self.readoff(0, headsize))
         if _magic != current_magic:
             raise s_common.BadHeapFile(mesg='Bad magic value present in heapfile header',
                                        evalu=current_magic, magic=_magic)
-        if _size != 32:
+        if _reqsize != 32:
             raise s_common.BadHeapFile(mesg='Unexpected size found for first heapfile header',
-                                       evalu=headsize + 32, size=_size)
+                                       evalu=headsize + 32, size=_reqsize)
 
         # How much data is currently store in heap?
         self.used = s_common.to_int(self.readoff(headsize, 8))
@@ -275,12 +275,13 @@ class Heap(s_eventbus.EventBus):
             int: Offset within the heap to use to store size bytes.
         '''
         # 16 byte aligned allocation sizes
+        allocsize = size
         rem = size % 16
         if rem:
-            size += 16 - rem
+            allocsize += 16 - rem
 
         # Account for the heap header
-        fullsize = headsize + size
+        fullsize = headsize + allocsize
 
         with self.alloclock:
 
@@ -300,7 +301,7 @@ class Heap(s_eventbus.EventBus):
             dataoff = self.used + headsize
 
             # Record the heap header for the current allocation
-            self._writeoff(self.used, packHeapHead(size))
+            self._writeoff(self.used, packHeapHead(size, allocsize))
 
             # Update our used value and then write that new used value
             # to the heapfile
@@ -326,3 +327,57 @@ class Heap(s_eventbus.EventBus):
             int: Size of the underlying atomfile which backs the heap.
         '''
         return self.atom.size
+
+
+class HeapWalker(s_eventbus.EventBus):
+    '''
+    The HeapWalker is a structure designed to assist in walking a Heap object for inspection purposes.
+
+    Args:
+        fd (file):
+    '''
+    def __init__(self, fd, strict=True):
+        s_eventbus.EventBus.__init__(self)
+
+        self.fd = fd
+        self.strict = strict
+
+        # Setup fini
+        self.onfini(fd.close)
+
+    def walk(self):
+        '''
+
+        Returns:
+
+        '''
+        # Setup the expected size for the heap structures
+        self.fd.seek(0)
+        header = self.fd.read(headsize)
+        magic, reqsize, allocsize, flags = unpackHeapHead(header)
+        total_heap_size = s_common.to_int(self.fd.read(size))
+        self.fd.seek(0)
+        while True:
+            # Read the header
+            header = self.fd.read(headsize)
+            # Save the current fd position
+            off = self.fd.tell()
+            magic, reqsize, allocsize, flags = unpackHeapHead(header)
+            # Validate magic
+            if magic != current_magic:
+                if self.strict or magic not in known_magic:
+                    raise s_common.BadHeapFile(mesg='Bad magic value encountered while walking a heapfile.')
+                else:
+                    log.error('Uknown magic value encountered, [%s]', magic)
+            self.fire('heap:walk:header', fd=self.fd, off=off, magic=magic, size=size)
+            # Move to the location of the next heap header
+            next_header = off + size
+            if next_header == total_heap_size:
+                break
+            if next_header > total_heap_size:
+                if self.strict:
+                    raise s_common.BadHeapFile(mesg='Next header location is past the allocated heap size')
+                log.error('Next header location is past the allocated heap size')
+                break
+            self.fd.seek(next_header)
+        self.fire('heap:walk:done', fd=self.fd, total_heap_size=total_heap_size, next_header=next_header)

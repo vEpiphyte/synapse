@@ -193,3 +193,66 @@ class HeapTest(SynTest):
                 fd.write(byts)
                 # ensure the s_heap fails to validate the size for heap header at 0x0
                 self.raises(BadHeapFile, s_heap.Heap, fd)
+
+    def test_heap_walker(self):
+        edata = {}
+        with self.getTestDir() as fdir:
+            fp = os.path.join(fdir, 'test.heap')
+            fd = genfile(fp)
+
+            with s_heap.Heap(fd) as heap0:  # type: s_heap.Heap
+
+                off0 = heap0.alloc(8)
+                off1 = heap0.alloc(8)
+
+                edata[off0] = b'asdfqwer'
+                edata[off1] = b'hehehaha'
+
+                # do interlaced writes
+                heap0.writeoff(off0, b'asdf')
+                heap0.writeoff(off1, b'hehe')
+
+                heap0.writeoff(off0 + 4, b'qwer')
+                heap0.writeoff(off1 + 4, b'haha')
+
+                # Do a large write
+                off2 = heap0.alloc(heap0.pagesize + 2)
+                heap0.writeoff(off2, (heap0.pagesize + 2) // 2 * b':)')
+                edata[off2] = (heap0.pagesize + 2) // 2 * b':)'
+
+            fd = genfile(fp)
+            with s_heap.HeapWalker(fd) as walker:  # type: s_heap.HeapWalker
+                from pprint import pprint
+
+                def hehe(mesg):
+                    pprint(mesg)
+
+                dcheck = {}
+
+                def data_check(mesg):
+                    off = mesg[1].get('off')
+                    size = mesg[1].get('size')
+                    # Skip the first header
+                    if off == 32:
+                        return
+
+                    fd.seek(off)
+                    byts = fd.read(size)
+                    print(byts[:100])
+                    dcheck[off] = byts == edata.get(off)
+                    self.eq(byts, edata.get(off))
+
+                walker.on('heap:walk:header', hehe)
+                walker.on('heap:walk:done', hehe)
+                walker.on('heap:walk:header', data_check)
+                w0 = walker.waiter(4, 'heap:walk:header')
+                w1 = walker.waiter(1, 'heap:walk:done')
+                walker.walk()
+                w0.wait(1)
+                w1.wait(1)
+                self.eq(w0.count, 4)
+                self.eq(w1.count, 1)
+                self.eq(set([True]), set(dcheck.values()))
+
+    def test_heap_walker_strict(self):
+        pass
