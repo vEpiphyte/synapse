@@ -63,25 +63,50 @@ class AtomTest(SynTest):
     def test_atomic_ready(self):
 
         ready = s_atomic.Ready(size=2)
-        self.false(ready.wait(timeout=0.001))
+        self.false(ready.wait(0.001))
 
         ready.inc()
-        self.false(ready.wait(timeout=0.001))
+        self.false(ready.wait(0.001))
 
         ready.inc()
-        self.true(ready.wait(timeout=0.001))
+        self.true(ready.wait(0.001))
 
         ready.dec()
-        self.false(ready.wait(timeout=0.001))
+        self.false(ready.wait(0.001))
 
         ready = s_atomic.Ready(size=2)
 
         with ready:
 
-            self.false(ready.wait(timeout=0.001))
+            self.false(ready.wait(0.001))
             with ready:
-                self.true(ready.wait(timeout=0.001))
+                self.true(ready.wait(0.001))
 
-            self.false(ready.wait(timeout=0.001))
+            self.false(ready.wait(0.001))
 
-        self.false(ready.wait(timeout=0.001))
+        self.false(ready.wait(0.001))
+
+        self.raises(ValueError, s_atomic.Ready, -1)
+        self.raises(ValueError, s_atomic.Ready, 0)
+
+        ready = s_atomic.Ready(1)
+
+        # Ensure ready events are fired across threads
+        def rinc():
+            time.sleep(0.05)
+            ready.inc()
+
+        def rdec():
+            time.sleep(0.05)
+            ready.dec()
+
+        s_glob.pool.call(rinc)
+        self.true(ready.wait(1))
+
+        # increment to 2 and clear the event
+        s_glob.pool.call(rinc)
+        self.false(ready.wait(1))
+
+        # We are only positive edge triggered
+        s_glob.pool.call(rdec)
+        self.false(ready.wait(1))
