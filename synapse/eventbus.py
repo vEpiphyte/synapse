@@ -36,6 +36,9 @@ class EventBus(object):
     '''
     A synapse EventBus provides an easy way manage callbacks.
     '''
+    _ALLOWED_POSTFINI = ('isfini',
+                         '__repr__'
+                         )
     def __init__(self):
         self.isfini = False
         self.finievt = None
@@ -53,6 +56,21 @@ class EventBus(object):
 
     def __exit__(self, type, value, traceback):
         self.fini()
+
+    def _fu(self):
+        allowed_postfini = tuple(self._ALLOWED_POSTFINI)
+        def throw(name):
+            if name in allowed_postfini:
+                return object.__getattribute__(self, name)
+            raise s_common.IsFini(mesg='Object is fini', name=name)
+        setattr(self, '_ga', throw)
+
+    def _ga(self, name):
+        return object.__getattribute__(self, name)
+
+    def __getattribute__(self, name):
+        func = object.__getattribute__(self, '_ga')
+        return func(name)
 
     def incref(self):
         '''
@@ -230,6 +248,8 @@ class EventBus(object):
 
         if fevt is not None:
             fevt.set()
+
+        self._fu()
 
         return 0
 
