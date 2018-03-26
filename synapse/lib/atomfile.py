@@ -113,10 +113,28 @@ class AtomFile(AtomBase):
         os.pwrite(self.fileno, b'\x00', size - 1)
 
     def _readoff(self, offs, size):
-        return os.pread(self.fileno, size, offs)
+        if size < s_const.int32_signed_max:
+            return os.pread(self.fileno, size, offs)
+        else:
+            parts = []
+            while True:
+                byts = os.pread(self.fileno, s_const.int32_signed_max, offs)
+                parts.append(byts)
+                offs = offs + len(byts)
+                size = size - len(byts)
+                if size < s_const.int32_signed_max:
+                    parts.append(os.pread(self.fileno, s_const.int32_signed_max, offs))
+                    break
+            return b''.join(parts)
 
     def _writeoff(self, offs, byts):
-        os.pwrite(self.fileno, byts, offs)
+        if len(byts) < s_const.int32_signed_max:
+            os.pwrite(self.fileno, byts, offs)
+        else:
+            woffs = offs
+            for part in s_common.chunks(byts, s_const.int32_signed_max):
+                os.pwrite(self.fileno, part, woffs)
+                woffs = offs + len(part)
         with self.lock:
             self.size = max(self.size, offs + len(byts))
 

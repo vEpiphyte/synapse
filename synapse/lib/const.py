@@ -22,6 +22,8 @@ exbibyte = 1024 * pebibyte
 zebibyte = 1024 * exbibyte
 yobibyte = 1024 * zebibyte
 
+int32_signed_max = (2**31) - 1
+
 # time (in millis) constants
 second = 1000
 minute = second * 60
