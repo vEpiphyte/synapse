@@ -86,7 +86,7 @@ osx_test_steps:  &osx_test_steps
             source ~/.bash_profile
             # install python 3.6.5
             pyenv install --list
-            pyenv install 3.6.5
+            pyenv install --verbose 3.6.5
       - run:
           name: pyenv tests
           command: |
