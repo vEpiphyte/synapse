@@ -63,12 +63,6 @@ test_steps:  &test_steps
 osx_test_steps:  &osx_test_steps
   steps:
       - checkout
-      - run:
-          name: check things
-          command: |
-            brew list
-            brew cask list
-            ls -ltha ~/
 
       - restore_cache:
           keys:
@@ -106,23 +100,22 @@ osx_test_steps:  &osx_test_steps
             pyenv shell syn36
             mkdir test-reports
             circleci tests glob synapse/tests/test_*.py | circleci tests split --split-by=timings | xargs python3 -m pytest -v -s -rs --durations 6 --maxfail 6 -p no:logging --junitxml=test-reports/junit.xml ${COVERAGE_ARGS}
-#
-#      - run:
-#          name: report coverage
-#          command: |
-#            if [ -n "${COVERAGE_ARGS}" ]; then codecov --name ${IMAGE_VERSION}node${CIRCLE_NODE_INDEX} --required; fi;
-#
-#      - store_test_results:
-#          path: test-reports
-#
-#      - store_artifacts:
-#          path: test-reports
 
+      - run:
+          name: report coverage
+          command: |
+            if [ -n "${COVERAGE_ARGS}" ]; then codecov --name ${IMAGE_VERSION}node${CIRCLE_NODE_INDEX} --required; fi;
+
+      - store_test_results:
+          path: test-reports
+
+      - store_artifacts:
+          path: test-reports
 
 jobs:
 
   osx36:
-    parallelism: 6
+    parallelism: 7
     macos:
       xcode: "9.3.0"
 
