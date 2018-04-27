@@ -77,7 +77,7 @@ osx_test_steps:  &osx_test_steps
       - run:
           name: pyenv install
           command: |
-            . ./circleci/pyenv_osx.sh
+            . .circleci/pyenv_osx.sh
 
       - run:
           name: setup test packages
