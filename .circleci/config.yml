@@ -82,6 +82,7 @@ osx_test_steps:  &osx_test_steps
       - run:
           name: pyenv tests
           command: |
+            source ~/.bash_profile
             pyenv help
 
 #      - run:
