@@ -18,3 +18,4 @@ source ~/.bash_profile
 # install python 3.6.5
 pyenv install --list
 pyenv install --verbose 3.6.5
+pyenv virvualenv --copies 3.6.5 syn36
