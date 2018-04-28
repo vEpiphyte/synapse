@@ -7,7 +7,7 @@ if [ ! -d ~/.pyenv ]; then
   exit 1
 else
   echo "Checking pyenv versions"
-  ret = `pyenv versions | grep syn36`
+  ret=`pyenv versions | grep syn36`
   echo $ret
   if [ $? -eq 0 ]; then
     echo "syn36 venv found"
