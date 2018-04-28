@@ -175,6 +175,6 @@ workflows:
   run_tests:
     jobs:
       - osx36
-#      - python36
-#      - python35
-#      - python34
+      - python36
+      - python35
+      - python34
