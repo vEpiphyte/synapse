@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 if [ -d ~/.pyenv ]; then
-  exit 0
+  source ~/.bash_profile
+  pyenv versions | grep syn36
+  if [ $? -eq 0 ]; then
+    exit 0
+  fi
 fi
 # Install xz
 brew install xz
@@ -16,6 +20,4 @@ echo 'eval "$(pyenv virtualenv-init -)"' >> ~/.bash_profile
 # Source ~/.bash_profile
 source ~/.bash_profile
 # install python 3.6.5
-pyenv install --list
-pyenv install --verbose 3.6.5
-pyenv virtualenv --copies 3.6.5 syn36
+pyenv install 3.6.5

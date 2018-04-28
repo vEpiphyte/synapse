@@ -73,12 +73,20 @@ osx_test_steps:  &osx_test_steps
           command: |
             . .circleci/pyenv_osx.sh
 
+      - save_cache:
+          paths:
+            - ~/.pyenv
+            - ~/.bash_profile
+          key: v2-osx-pyvenv-{{ .Environment.CIRCLE_STAGE }}-{{ .Branch }}-{{ checksum "setup.py" }}-{{ checksum ".circleci/pyenv_osx.sh" }}
+
+      - restore_cache:
+          keys:
+          - v2-osx-venv-{{ .Environment.CIRCLE_STAGE }}-{{ .Branch }}-{{ checksum "setup.py" }}-{{ checksum ".circleci/venv_osx.sh" }}
+
       - run:
-          name: setup test packages
+          name: venv setup
           command: |
             source ~/.bash_profile
-            pyenv shell syn36
-            python3 -m pip install -U wheel pip pytest pytest-cov pycodestyle codecov
 
       - run:
           name: install synapse
@@ -89,9 +97,8 @@ osx_test_steps:  &osx_test_steps
 
       - save_cache:
           paths:
-            - ~/.pyenv
-            - ~/.bash_profile
-          key: v2-osx-pyvenv-{{ .Environment.CIRCLE_STAGE }}-{{ .Branch }}-{{ checksum "setup.py" }}-{{ checksum ".circleci/pyenv_osx.sh" }}
+            - ~/.pyenv/versions
+          key: v2-osx-venv-{{ .Environment.CIRCLE_STAGE }}-{{ .Branch }}-{{ checksum "setup.py" }}-{{ checksum ".circleci/venv_osx.sh" }}
 
       - run:
           name: run tests
@@ -99,25 +106,26 @@ osx_test_steps:  &osx_test_steps
             source ~/.bash_profile
             pyenv shell syn36
             mkdir test-reports
-            circleci tests glob synapse/tests/test_*.py | circleci tests split --split-by=timings | xargs python3 -m pytest -v -s -rs --durations 6 --maxfail 6 -p no:logging --junitxml=test-reports/junit.xml ${COVERAGE_ARGS}
-
-      - run:
-          name: report coverage
-          command: |
-            source ~/.bash_profile
-            pyenv shell syn36
-            if [ -n "${COVERAGE_ARGS}" ]; then codecov --name ${IMAGE_VERSION}node${CIRCLE_NODE_INDEX} --required; fi;
-
-      - store_test_results:
-          path: test-reports
-
-      - store_artifacts:
-          path: test-reports
+            python -m unittest synapse.tests.test_lib_storm -f -v
+#            circleci tests glob synapse/tests/test_*.py | circleci tests split --split-by=timings | xargs python3 -m pytest -v -s -rs --durations 6 --maxfail 6 -p no:logging --junitxml=test-reports/junit.xml ${COVERAGE_ARGS}
+#
+#      - run:
+#          name: report coverage
+#          command: |
+#            source ~/.bash_profile
+#            pyenv shell syn36
+#            if [ -n "${COVERAGE_ARGS}" ]; then codecov --name ${IMAGE_VERSION}node${CIRCLE_NODE_INDEX} --required; fi;
+#
+#      - store_test_results:
+#          path: test-reports
+#
+#      - store_artifacts:
+#          path: test-reports
 
 jobs:
 
   osx36:
-    parallelism: 7
+    parallelism: 1
     macos:
       xcode: "9.3.0"
 
@@ -168,6 +176,6 @@ workflows:
   run_tests:
     jobs:
       - osx36
-      - python36
-      - python35
-      - python34
+#      - python36
+#      - python35
+#      - python34
