@@ -124,7 +124,7 @@ osx_test_steps:  &osx_test_steps
 jobs:
 
   osx36:
-    parallelism: 1
+    parallelism: 7
     macos:
       xcode: "9.3.0"
 
