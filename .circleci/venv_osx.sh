@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 source ~/.bash_profile
 ls -ltha ~/
-if [ -e ~/.pyenv ]; then
+if [ -d ~/.pyenv ]; then
+  echo "No .pyenv found"
+  exit 1
+else
   pyenv versions | grep syn36
   if [ $? -eq 0 ]; then
     echo "syn36 venv found"
     exit 0
   fi
-else
-  echo "No .pyenv found"
-  exit 1
 fi
 
 echo "Adding syn36 venv and installing packages"
