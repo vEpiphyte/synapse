@@ -104,6 +104,8 @@ osx_test_steps:  &osx_test_steps
       - run:
           name: report coverage
           command: |
+            source ~/.bash_profile
+            pyenv shell syn36
             if [ -n "${COVERAGE_ARGS}" ]; then codecov --name ${IMAGE_VERSION}node${CIRCLE_NODE_INDEX} --required; fi;
 
       - store_test_results:
