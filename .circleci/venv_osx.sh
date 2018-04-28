@@ -9,7 +9,7 @@ else
   exit 1
 fi
 
-# install python 3.6.5
+# Make a venv from 3.6.5 and install some base packages in it
 pyenv virtualenv --copies 3.6.5 syn36
 pyenv shell syn36
 python3 -m pip install -U wheel pip pytest pytest-cov pycodestyle codecov

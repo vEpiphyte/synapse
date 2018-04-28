@@ -1,10 +1,6 @@
 #!/usr/bin/env bash
 if [ -d ~/.pyenv ]; then
-  source ~/.bash_profile
-  pyenv versions | grep syn36
-  if [ $? -eq 0 ]; then
-    exit 0
-  fi
+  exit 0
 fi
 # Install xz
 brew install xz
