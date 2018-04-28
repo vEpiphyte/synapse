@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 source ~/.bash_profile
-which pyenv
-ls -ltha ~/
 if [ ! -d ~/.pyenv ]; then
   echo "No ~/.pyenv found"
   exit 1
