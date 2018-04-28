@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
 source ~/.bash_profile
+which pyenv
 ls -ltha ~/
 if [ ! -d ~/.pyenv ]; then
   echo "No ~/.pyenv found"
   exit 1
 else
-  pyenv versions | grep syn36
+  echo "Checking pyenv versions"
+  ret = `pyenv versions | grep syn36`
+  echo $ret
   if [ $? -eq 0 ]; then
     echo "syn36 venv found"
     exit 0
