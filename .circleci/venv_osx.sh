@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 source ~/.bash_profile
 ls -ltha ~/
-if [ -d ~/.pyenv ]; then
+if [ -e ~/.pyenv ]; then
   pyenv versions | grep syn36
   if [ $? -eq 0 ]; then
     echo "syn36 venv found"
