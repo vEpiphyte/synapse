@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 source ~/.bash_profile
 ls -ltha ~/
-if [ -d ~/.pyenv ]; then
-  echo "No .pyenv found"
+if [ ! -d ~/.pyenv ]; then
+  echo "No ~/.pyenv found"
   exit 1
 else
   pyenv versions | grep syn36
