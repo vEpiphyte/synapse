@@ -86,7 +86,7 @@ osx_test_steps:  &osx_test_steps
       - run:
           name: venv setup
           command: |
-            source ~/.bash_profile
+            . .circleci/venv_osx.sh
 
       - run:
           name: install synapse
