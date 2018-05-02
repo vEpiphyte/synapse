@@ -58,7 +58,6 @@ class CryptoModelTest(SynTest):
                 self.eq(node.props, {})
                 self.raises(BadTypeValu, xact.addNode, 'hash:sha256', TEST_SHA384)
                 # sha384
-                # sha256
                 node = xact.addNode('hash:sha384', TEST_SHA384.upper())
                 self.eq(node.ndef, ('hash:sha384', TEST_SHA384))
                 self.eq(node.props, {})
