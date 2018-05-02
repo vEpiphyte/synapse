@@ -4,6 +4,7 @@ import base64
 
 import synapse.common as s_common
 import synapse.lib.types as s_types
+import synapse.lib.xact as s_xact
 
 from synapse.tests.common import *
 
@@ -12,9 +13,11 @@ class TestTypes(SynTest):
 
     def test_hex_type(self):
         with self.getTestCore() as core:
-            t = core.model.types.get('hex')
-            self.nn(t)
+            # fixme - getTestCore should have this dude loaded in him already!
+            modu = core.addCoreMods([('synapse.tests.test_cortex.TestModule', {})])
 
+            t = core.model.type('testhexa')
+            # Test norming & index
             testvectors = [
                 ('C', 'c', b'\x0c'),
                 ('10', '10', b'\x10'),
@@ -32,24 +35,31 @@ class TestTypes(SynTest):
                 ('newp', s_exc.BadTypeValu, None)
             ]
 
-            for v, e, b in testvectors:
-                if isinstance(e, str):
+            for v, n, b in testvectors:
+                if isinstance(n, str):
                     r, subs = t.norm(v)
-                    self.eq(r, e)
+                    self.eq(r, n)
                     self.eq(subs, {})
                     self.eq(t.indx(r), b)
                 else:
-                    self.raises(e, t.norm, v)
+                    self.raises(n, t.norm, v)
 
-        t = s_types.Hex(None, None, None, {'width': 5})
-        r, subs = t.norm('12A40')
-        self.eq(r, '12a40')
-        self.raises(s_exc.BadTypeValu, t.norm, '1234')
-        self.eq(t.indx('10001'), b'\x01\x00\x01')
+            t = core.model.type('testhex4')
+            r, subs = t.norm('12A4')
+            self.eq(r, '12a4')
+            self.raises(s_exc.BadTypeValu, t.norm, '1234A')
+            self.eq(t.indx('1001'), b'\x10\x01')
+            self.eq(t.indx('d41d'), b'\xd4\x1d')
 
-        t = s_types.Hex(None, None, None, {'width': 32})
-        self.eq(t.indx('d41d8cd98f00b204e9800998ecf8427e'),
-                b'\xd4\x1d\x8c\xd9\x8f\x00\xb2\x04\xe9\x80\t\x98\xec\xf8B~')
+            # Do some node creation and lifting
+            # TODO - Do we have other lift operators to implement or test??
+            with core.xact(write=True) as xact:  # type: s_xact.Xact
+                node = xact.addNode('testhexa', 0x10001)
+                self.eq(node.ndef[1], '10001')
+
+            with core.xact() as xact:  # type: s_xact.Xact
+                nodes = list(xact.getNodesBy('testhexa', '10001'))
+                self.len(1, nodes)
 
 class FIXME(object):
     def test_datatype_basics(self):
