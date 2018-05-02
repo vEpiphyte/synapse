@@ -12,6 +12,7 @@ coremods = (
     ('synapse.models.inet.InetModule', {}),
     ('synapse.models.material.MatModule', {}),
     ('synapse.models.language.LangModule', {}),
+    ('synapse.models.crypto.CryptoModule', {}),
 )
 
 #logger = logging.getLogger(__name__)
