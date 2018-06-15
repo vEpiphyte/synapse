@@ -318,6 +318,20 @@ class CortexTest(s_test.SynTest):
                 self.false(node.hasTag('foo'))
                 self.false(node.hasTag('foo.bar'))
 
+    def test_stable_guid(self):
+        with self.getTestCore() as core:
+            with core.snap() as snap:
+                node = snap.addNode('testguid', {'strp': 'ICE CREAM COMPUTER'})
+                self.eq(node.ndef[1], 'bf4555185c5f5b640ccc32e9e8c8ffdf')
+                self.eq(node.get('strp'), 'ice cream computer')
+                self.eq(node.get('intp'), None)
+
+                node = snap.addNode('testguid', {'strp': 'ICE CREAM COMPUTER',
+                                                 'intp': 1})
+                self.eq(node.ndef[1], '536a9a3ac63f2add74ae021aa63ef8d6')
+                self.eq(node.get('strp'), 'ice cream computer')
+                self.eq(node.get('intp'), 1)
+
     def test_base_types(self):
 
         with self.getTestCore() as core:

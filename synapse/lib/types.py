@@ -400,6 +400,34 @@ class Guid(Type):
 
     def postTypeInit(self):
         self.setNormFunc(str, self._normPyStr)
+        self.setNormFunc(dict, self._normPyDict)
+
+    def _normPyDict(self, valu):
+
+        # Get a reference to our props Form for doing type normalizing.
+        bprop = self.modl.prop(self.name)
+        if not bprop:
+            raise s_exc.NoSuchProp(mesg='Cannot norm a dictionary for a guid with the named prop present.',
+                                   prop=self.name)
+
+        vals = []
+        adds = []
+        subs = {}
+        for k, v in valu.items():
+            prop = bprop.props.get(k)
+            if not prop:
+                raise Exception('wtf bro?')
+            nv, info = prop.type.norm(v)
+            subs.update({':'.join([k, _k]): _v for _k, _v in info.get('subs', {}).items()})
+            adds.extend(info.get('adds', ()))
+            vals.append((k, nv))
+
+        vals.sort(key=lambda x: x[0])
+        subs.update(vals)
+        valu = s_common.guid(valu=vals)
+
+        info = {'subs': subs, 'adds': adds}
+        return valu, info
 
     def _normPyStr(self, valu):
 

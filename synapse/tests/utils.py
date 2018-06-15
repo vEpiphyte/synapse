@@ -141,6 +141,8 @@ testmodel = {
 
         ('cycle0', ('str', {}), {}),
         ('cycle1', ('str', {}), {}),
+
+        ('testguid', ('guid', {}), {}),
     ),
 
     'forms': (
@@ -194,6 +196,11 @@ testmodel = {
             ('targ', ('pivtarg', {}), {}),
             ('lulz', ('teststr', {}), {}),
             ('tick', ('time', {}), {}),
+        )),
+
+        ('testguid', {}, (
+            ('strp', ('str', {'lower': True}), {}),
+            ('intp', ('int', {}), {}),
         )),
     ),
 }
