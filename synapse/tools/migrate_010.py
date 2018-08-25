@@ -562,7 +562,7 @@ class Migrator:
         'syn:tagform',
     ))
 
-    secondary_props_to_drop = set((
+    secondary_props_to_drop = {
         'syn:tag:depth',
         'ps:name:middle',
         'ps:name:sur',
@@ -596,7 +596,11 @@ class Migrator:
         'inet:dns:look:mx',
         'inet:dns:look:soa',
         'inet:dns:look:txt',
-    ))
+        'inet:ipv4:cc',
+        'inet:ipv4:asn',
+        'inet:ipv4:type',
+        'inet:ipv4:latlong',
+    }
 
     def convert_subprop(self, formname, propname, val, props):
         typename = self.core.getPropTypeName(propname)

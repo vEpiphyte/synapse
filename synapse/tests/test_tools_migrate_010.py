@@ -287,13 +287,20 @@ class Migrate010Test(s_iq.SynTest):
     def test_ipv4(self):
         self.maxDiff = None
         with self.getTestDir() as dirn, self.getRamCore() as core:
-            tufo = core.formTufoByProp('inet:ipv4', '5.5.5.5')
+            tufo = core.formTufoByProp('inet:ipv4', '5.5.5.5',
+                                       cc='us', asn=12, type='unicast',
+                                       latlong='2.0,1.0'
+                                       )
             core.addTufoTag(tufo, 'test')
             fh = tempfile.TemporaryFile(dir=dirn)
             s_migrate.Migrator(core, fh, tmpdir=dirn).migrate()
             nodes = self.get_formfile('inet:ipv4', fh)
             self.len(1, nodes)
             self.eq(nodes[0][1]['tags'], {'test': (None, None)})
+            self.notin('loc', nodes[0][1]['props'])
+            self.notin('asn', nodes[0][1]['props'])
+            self.notin('type', nodes[0][1]['props'])
+            self.notin('latlong', nodes[0][1]['props'])
 
     def test_inet_dns_soa(self):
         self.maxDiff = None
