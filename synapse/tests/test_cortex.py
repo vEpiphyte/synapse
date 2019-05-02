@@ -2707,3 +2707,41 @@ class CortexBasicTest(s_t_utils.SynTest):
             self.eq(norm, 'asdf')
             # but getPropNorm won't handle that
             await self.asyncraises(s_exc.NoSuchProp, core.getPropNorm('test:lower', 'ASDF'))
+
+    async def test_add_layer(self):
+        import os
+        import shutil
+
+        with self.getTestDir() as dirn:
+            path00 = s_common.gendir(dirn, 'core00')
+            path01 = s_common.gendir(dirn, 'core01')
+
+            async with self.getTestCore(dirn=path00) as core00:
+                await core00.nodes('[ test:str=beep ]')
+
+                iden00 = core00.getCellIden()
+
+            async with self.getTestCore(dirn=path01) as core01:
+
+                self.len(0, await core01.eval('test:str=beep').list())
+                await core01.addLayer(iden=iden00,
+                                      )
+                iden01 = core01.getCellIden()
+                await core01.setViewLayers((iden01, iden00))
+
+            src = s_common.gendir(path00, 'layers', iden00)
+            dst = s_common.gendir(path01, 'layers', iden00)
+            shutil.rmtree(dst)
+            shutil.copytree(src, dst,
+                            )
+
+            async with self.getTestCore(dirn=path01) as core01:
+                self.len(1, await core01.eval('test:str=beep').list())
+                # We can try to delete the node...
+                self.len(0, await core01.eval('test:str=beep | delnode --force').list())
+                # But it won't work because it came from another layer
+                self.len(1, await core01.eval('test:str=beep').list())
+
+                splices = await alist(core01.layers.get(iden01).splices(0, 1000))
+                for splice in splices:
+                    print(splice)

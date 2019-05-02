@@ -794,13 +794,17 @@ class SynTest(unittest.TestCase):
 
     @contextlib.asynccontextmanager
     async def getTestReadWriteCores(self, conf=None, dirn=None):
+
         async with self.getTestCore(conf=conf, dirn=dirn) as core:
             yield core, core
 
     @contextlib.asynccontextmanager
     async def getTestCore(self, conf=None, dirn=None):
         '''
-        Return a simple test Cortex.
+        Get a simple test Cortex.
+
+        Returns:
+            s_cortex.Cortex: A Cortex object.
         '''
         if conf is None:
             conf = {}

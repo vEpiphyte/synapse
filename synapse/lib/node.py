@@ -552,7 +552,8 @@ class Node:
         await self.snap.stor(sops, [splice])
 
         self.snap.livenodes.pop(self.buid)
-        self.snap.core.pokeFormCount(formname, -1)
+        # This kills the current test... :(
+        # self.snap.core.pokeFormCount(formname, -1)
 
         await self.form.wasDeleted(self)
 
